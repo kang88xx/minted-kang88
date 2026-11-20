@@ -5,10 +5,11 @@ const views = [
   {id:'outside', title:t('Exterior view','외관 입체도'), areaTitle:t('Exterior zones','외관 구역'), angle:-32, elevation:15,
    zones:['exterior','banner','topbanner','signage','entrance']},
   {id:'inside', title:t('Interior cutaway','내부 절개 투시도'), areaTitle:t('Interior zones','내부 구역'), angle:-32, elevation:35,
-   zones:['stage','players','seats','tech','booth','gate','buffet','hangwide','hangtall','vip','cast','rail','shared']}
+   zones:['stage','players','seats','tech','booth','gate','buffet','hangwide','hangtall','vip','cast','rail','rooms','gallery','facility','shared']}
 ];
-// Interior zones drawn on one floor only. Booths and venue operations appear on both.
-const zoneFloor = {stage:1, players:1, seats:1, tech:1, gate:1, buffet:1, hangtall:1, vip:2, cast:2, rail:2};
+// Floors each interior zone is drawn on. Zones not listed here appear on every floor.
+const zoneFloors = {stage:[1], players:[1], seats:[1], tech:[1], gate:[1], buffet:[1], hangtall:[1], booth:[1,2], hangwide:[1,2],
+  vip:[2], cast:[2], rail:[2], rooms:[3], gallery:[3]};
 // Sizes of banner, sign and LED positions, shown with the zone name on the drawing.
 const specs = {banner:'11,820 × 5,680 mm', topbanner:'9,700 × 2,800 mm', signage:'약 2,070 × 2,300 mm × 12면', entrance:'사인 2,400 × 520 mm',
   stage:'LED 10,000 × 5,000 mm', hangwide:'6,300 × 2,380 mm', hangtall:'2,430 × 5,540 mm'};
@@ -25,7 +26,7 @@ const costs = {
   gate:[t('approx. KRW 1,070,000','약 1,070,000원'),t('hosts, wristbands, draw tickets and badges, estimate','안내 스태프·팔찌·추첨권·명찰, 추정')],
   buffet:[t('KRW 6,250,000','6,250,000원'),t('250 × KRW 25,000, unconfirmed, excl. VAT and delivery','250인분 × 25,000원, 확정 아님, 부가세·출장비 별도')]
 };
-const floorStart = {1:'stage', 2:'vip'};
+const floorStart = {1:'stage', 2:'vip', 3:'rooms'};
 const zones = {
   exterior:[t('Building & venue','건물·대관'),t('48 hours','48시간'),
     t('The building is 24.38 m wide and 17.07 m deep: shipping containers stacked on four floors around an atrium. The 48-hour hire on 19–20 December covers setup, both event days and teardown. Equipment loads in through the two-storey garage door on the west side. The seating plan still requires venue confirmation.','정면 24.38 m, 깊이 17.07 m 규모로, 아트리움 둘레에 컨테이너를 4개 층으로 쌓은 건물입니다. 12월 19–20일 48시간 대관 안에 설치, 이틀 행사, 철거를 모두 진행합니다. 장비는 서쪽 면의 2개 층 높이 개러지 도어로 반입합니다. 좌석 배치는 대관처 확인이 필요합니다.')],
@@ -55,8 +56,14 @@ const zones = {
     '정문으로 들어서면 정면에 보이는 자리로, 북쪽 개러지 도어 위 2층 컨테이너 면입니다. 대관처 규격은 가로 6,300 × 세로 2,380 mm이며 사용 여부는 선택입니다.'],
   hangtall:['실내 세로 현수막','2,430 × 5,540 mm',
     'LED 스크린 오른쪽, 승강기 쪽 컨테이너 면에 2개 층 높이로 거는 자리입니다. 대관처 규격은 가로 2,430 × 세로 5,540 mm이며 사용 여부는 선택입니다. 홀을 가리지 않도록 도면에는 테두리만 그렸습니다.'],
+  rooms:['선수 대기실','3층 A룸 · B룸',
+    '3층 컨테이너 A룸과 B룸을 선수 8명의 대기실로 씁니다. 방 하나는 폭 2.44 m, 길이 약 12 m이고 북쪽 복도 쪽 문으로 드나듭니다. 무대까지는 북쪽 내부 계단이나 승강기로 내려갑니다. 서쪽 두 칸은 대관 제외 공간입니다.'],
+  gallery:['3층 갤러리','기본 대관 제외',
+    '무대 위쪽의 3층 갤러리는 기본 대관에 들어 있지 않고, 별도 협의 후 대관할 수 있습니다. 이 계획에서는 쓰지 않습니다. 홀 쪽 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.'],
+  facility:['화장실 · 승강기 · 계단','1층 남 · 2층 여 · 3층 2칸',
+    '화장실은 층마다 북쪽에 있습니다. 1층은 남자 화장실로, 주방 옆 컨테이너의 동쪽 끝 문으로 들어갑니다. 2층은 여자 화장실로, 북쪽 전시실 동쪽 끝 문을 지나야 합니다. 3층은 북서쪽 모서리에 2칸이 있습니다. 승강기는 남쪽 가로변 가운데에 있습니다. 북쪽 내부 계단이 1–3층을 잇고, 서쪽 계단은 1층 홀에서 2층 발코니로 올라갑니다.'],
   vip:[t('VIP lounge','VIP 라운지'),t('2F · 12.19 × 4.88 m','2층 · 12.19 × 4.88 m'),
-    t('The north gallery room on the 2nd floor looks down on the stage through its LED glass wall, so it serves as the VIP lounge. The seating shown is a proposal.','2층 북쪽 전시실은 LED 유리벽 너머로 무대가 내려다보여 VIP 라운지로 씁니다. 이 유리벽은 홀 쪽으로 간단한 문자를 띄우는 흑백 LED 글라스입니다. 표시한 좌석은 제안 배치입니다.')],
+    t('The north gallery room on the 2nd floor looks down on the stage through its LED glass wall, so it serves as the VIP lounge. The seating shown is a proposal.','2층 북쪽 전시실은 LED 유리벽 너머로 무대가 내려다보여 VIP 라운지로 씁니다. 이 유리벽은 홀 쪽으로 간단한 문자를 띄우는 흑백 LED 글라스입니다. 여자 화장실 문이 이 방 동쪽 끝에 있어, 화장실로 가는 통로를 비워 두어야 합니다. 표시한 좌석은 제안 배치입니다.')],
   cast:[t('Commentary desk','해설석'),t('2F · 2 seats','2층 · 2석'),
     t('Two commentators sit on the 2nd-floor south walkway, overlooking the hall and the screen. The 3rd-floor railing was ruled out because the gallery floor hides the top of the screen from there.','홀과 스크린이 내려다보이는 2층 남쪽 통로에 해설석 2석을 둡니다. 3층 난간에서는 갤러리 바닥에 가려 스크린 위쪽이 보이지 않아 2층을 골랐습니다.')],
   rail:[t('Balcony & standing rail','발코니·스탠딩 관람'),t('2F · balcony camera','2층 · 발코니 카메라'),
@@ -79,7 +86,7 @@ function mountView(view){
  if(inside){
    const aside=element('div','stripside'),switcher=element('div','floors');
    switcher.setAttribute('role','group');switcher.setAttribute('aria-label',t('Floor','층'));
-   for(const level of [1,2]){
+   for(const level of [1,2,3]){
      const b=element('button','',t(level+'F',level+'층'));b.type='button';b.dataset.floor=level;
      b.setAttribute('aria-label',view.title+' · '+t('floor '+level,level+'층'));b.onclick=()=>showFloor(level,true);
      switcher.append(b);floorButtons.push(b);
@@ -116,15 +123,30 @@ function mountView(view){
  }
  function draw(){renderer.setCamera(angle,elevation,zoom);place();}
  function queueDraw(){if(!pending)pending=requestAnimationFrame(()=>{pending=0;draw()})}
+ // Floor change: the old drawing sinks away while the new one comes in from above, or the reverse going down.
+ const still=matchMedia('(prefers-reduced-motion: reduce)');
+ function snapshot(){
+   if(still.matches||!model.animate)return null;
+   const ghost=element('canvas','ghost');ghost.width=model.width;ghost.height=model.height;
+   ghost.getContext('2d').drawImage(model,0,0);return ghost;
+ }
+ function lift(ghost,up){
+   if(!ghost)return;
+   for(const old of scene.querySelectorAll('.ghost'))old.remove();
+   scene.append(ghost);
+   const shift=(up?1:-1)*36,timing={duration:480,easing:'cubic-bezier(.3,.7,.2,1)'};
+   ghost.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY('+shift+'%)',opacity:0}],timing).onfinish=()=>ghost.remove();
+   for(const layer of [model,pins,tip])layer.animate([{transform:'translateY('+(-shift)+'%)',opacity:0},{transform:'translateY(0)',opacity:1}],timing);
+ }
  // Redraws the interior for one floor. A zone that is not on that floor hands over to the floor's first zone.
  function showFloor(level,reselect){
-   if(level!==floor){floor=level;renderer.setScene(m=>{anchors=buildInterior(m,floor)});}
+   if(level!==floor){const ghost=snapshot(),up=level>floor;floor=level;renderer.setScene(m=>{anchors=buildInterior(m,floor)});lift(ghost,up);}
    for(const b of floorButtons)b.setAttribute('aria-pressed',String(+b.dataset.floor===floor));
    if(reselect)choose(anchors[selected]?selected:floorStart[floor]);
  }
  function choose(id){
    if(!view.zones.includes(id))return;
-   if(inside&&zoneFloor[id]&&zoneFloor[id]!==floor)showFloor(zoneFloor[id],false);
+   if(inside&&zoneFloors[id]&&!zoneFloors[id].includes(floor))showFloor(zoneFloors[id][0],false);
    selected=id;const [name,info,desc]=zones[id];
    for(const el of [...list.children,...pins.children]){
      const active=el.dataset.id===id;el.classList.toggle('sel',active);el.setAttribute('aria-pressed',String(active));
