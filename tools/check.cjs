@@ -12,23 +12,26 @@ const base=process.argv[2];
     const inside=page.locator('.plate[data-view=inside]'), side=page.locator('.side[data-view=inside]');
     const pressed=()=>inside.locator('.floors button[aria-pressed=true]').getAttribute('data-floor');
     const pins=()=>inside.locator('.pin:not([hidden])').evaluateAll(n=>n.map(p=>p.dataset.id));
-    const sel=()=>side.locator('.area.sel').getAttribute('data-id');
+    const sel=()=>side.locator('.area.sel').evaluateAll(n=>n.length?n[0].dataset.id:null);
     assert.equal(await pressed(),'1');
+    // nothing is selected and no bubble or detail shows until a zone is picked
+    assert.equal(await page.locator('.cost-tip:visible, .detail:visible, .area.sel, .pin.sel').count(),0);
     assert.deepEqual(await pins(),['stage','players','seats','tech','booth','gate','buffet','hangwide','hangtall','facility','shared']);
     // a 2F-only zone picked from the list switches the drawing to 2F
     await side.locator('.area[data-id=cast]').click();
     assert.equal(await pressed(),'2'); assert.equal(await sel(),'cast');
     assert.deepEqual(await pins(),['booth','hangwide','vip','cast','rail','facility','shared']);
-    // switching back by hand leaves a 2F-only zone and selects the stage
+    // switching back by hand deselects a zone that is not on that floor
     await inside.locator('.floors button[data-floor="1"]').click();
-    assert.equal(await pressed(),'1'); assert.equal(await sel(),'stage');
+    assert.equal(await pressed(),'1'); assert.equal(await sel(),null);
+    assert.equal(await inside.locator('.cost-tip').isVisible(),false); assert.equal(await side.locator('.detail').isVisible(),false);
     // a zone on both floors survives the switch
     await side.locator('.area[data-id=booth]').click();
     await inside.locator('.floors button[data-floor="2"]').click();
     assert.equal(await sel(),'booth');
     // 3F: its own zones, and a zone shared by all floors keeps its selection
     await inside.locator('.floors button[data-floor="3"]').click();
-    assert.equal(await pressed(),'3'); assert.equal(await sel(),'rooms');
+    assert.equal(await pressed(),'3'); assert.equal(await sel(),null);
     assert.deepEqual(await pins(),['rooms','gallery','facility','shared']);
     await side.locator('.area[data-id=facility]').click(); assert.equal(await pressed(),'3');
     await inside.locator('.floors button[data-floor="2"]').click(); assert.equal(await sel(),'facility');

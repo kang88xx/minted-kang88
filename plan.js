@@ -26,7 +26,6 @@ const costs = {
   gate:[t('approx. KRW 1,070,000','약 1,070,000원'),t('hosts, wristbands, draw tickets and badges, estimate','안내 스태프·팔찌·추첨권·명찰, 추정')],
   buffet:[t('KRW 6,250,000','6,250,000원'),t('250 × KRW 25,000, unconfirmed, excl. VAT and delivery','250인분 × 25,000원, 확정 아님, 부가세·출장비 별도')]
 };
-const floorStart = {1:'stage', 2:'vip', 3:'rooms'};
 const zones = {
   exterior:[t('Building & venue','건물·대관'),t('48 hours','48시간'),
     t('The building is 24.38 m wide and 17.07 m deep: shipping containers stacked on four floors around an atrium. The 48-hour hire on 19–20 December covers setup, both event days and teardown. Equipment loads in through the two-storey garage door on the west side. The seating plan still requires venue confirmation.','정면 24.38 m, 깊이 17.07 m 규모로, 아트리움 둘레에 컨테이너를 4개 층으로 쌓은 건물입니다. 12월 19–20일 48시간 대관 안에 설치, 이틀 행사, 철거를 모두 진행합니다. 장비는 서쪽 면의 2개 층 높이 개러지 도어로 반입합니다. 좌석 배치는 대관처 확인이 필요합니다.')],
@@ -109,7 +108,7 @@ function mountView(view){
  if(inside)renderer.setExtent(interiorExtent());
  if(inside)renderer.setScene(m=>{anchors=buildInterior(m,floor)});
  else renderer.setScene(m=>{anchors=buildExterior(m)});
- let angle=view.angle,elevation=view.elevation,zoom=1,selected=view.zones[0],pending=0;
+ let angle=view.angle,elevation=view.elevation,zoom=1,selected=null,pending=0;   // nothing is selected until the viewer picks a zone
  const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
  function place(){
    for(const pin of pins.children){
@@ -118,6 +117,8 @@ function mountView(view){
      const {x,y}=renderer.project(anchors[pin.dataset.id]);
      pin.style.left=x+'px';pin.style.top=y+'px';
    }
+   tip.hidden=!selected||!anchors[selected];
+   if(tip.hidden)return;
    const {x,y}=renderer.project(anchors[selected]),w=tip.offsetWidth,h=tip.offsetHeight;
    tip.style.left=clamp(x-w/2,3,scene.clientWidth-w-3)+'px';
    tip.style.top=clamp(y-h-18>3?y-h-18:y+18,3,scene.clientHeight-h-3)+'px';
@@ -151,16 +152,21 @@ function mountView(view){
    };
    step(start);
  }
- // Redraws the interior for one floor. A zone that is not on that floor hands over to the floor's first zone.
+ // Redraws the interior for one floor. A selected zone that is not on that floor is deselected.
  function showFloor(level,reselect){
    if(level!==floor){settle();const ghost=snapshot(),up=level>floor;floor=level;renderer.setScene(m=>{anchors=buildInterior(m,floor)});lift(ghost,up);}
    for(const b of floorButtons)b.setAttribute('aria-pressed',String(+b.dataset.floor===floor));
-   if(reselect)choose(anchors[selected]?selected:floorStart[floor]);
+   if(reselect){if(selected&&!anchors[selected])clear();else place();}
+ }
+ function clear(){
+   selected=null;
+   for(const el of [...list.children,...pins.children]){el.classList.remove('sel');el.setAttribute('aria-pressed','false');}
+   detail.hidden=true;detail.replaceChildren();place();
  }
  function choose(id){
    if(!view.zones.includes(id))return;
    if(inside&&zoneFloors[id]&&!zoneFloors[id].includes(floor))showFloor(zoneFloors[id][0],false);
-   selected=id;const [name,info,desc]=zones[id];
+   selected=id;detail.hidden=false;const [name,info,desc]=zones[id];
    for(const el of [...list.children,...pins.children]){
      const active=el.dataset.id===id;el.classList.toggle('sel',active);el.setAttribute('aria-pressed',String(active));
    }
@@ -208,7 +214,7 @@ function mountView(view){
    drag=null;
  };
  model.onpointercancel=()=>{drag=null};
- showFloor(floor,false);choose(selected);draw();new ResizeObserver(queueDraw).observe(model);
+ showFloor(floor,false);clear();draw();new ResizeObserver(queueDraw).observe(model);
 }
 for(const view of views)mountView(view);
 const menu=document.getElementById('menu');
