@@ -105,7 +105,8 @@ function mountView(view){
  detail.setAttribute('aria-live','polite');sideHead.append(element('h2','',view.areaTitle));side.append(sideHead,list,detail);
  document.querySelector('#areas').append(side);
  const renderer=makeVenueRenderer(model);
- let anchors,floor=1;
+ let anchors,floor=1,dropping=0;
+ if(inside)renderer.setExtent(interiorExtent());
  if(inside)renderer.setScene(m=>{anchors=buildInterior(m,floor)});
  else renderer.setScene(m=>{anchors=buildExterior(m)});
  let angle=view.angle,elevation=view.elevation,zoom=1,selected=view.zones[0],pending=0;
@@ -123,24 +124,36 @@ function mountView(view){
  }
  function draw(){renderer.setCamera(angle,elevation,zoom);place();}
  function queueDraw(){if(!pending)pending=requestAnimationFrame(()=>{pending=0;draw()})}
- // Floor change: the old drawing sinks away while the new one comes in from above, or the reverse going down.
+ // Floor change. Going up, the floors already on show stay put and the new floor lowers onto them.
+ // Going down, the floor above lifts away.
  const still=matchMedia('(prefers-reduced-motion: reduce)');
  function snapshot(){
    if(still.matches||!model.animate)return null;
    const ghost=element('canvas','ghost');ghost.width=model.width;ghost.height=model.height;
    ghost.getContext('2d').drawImage(model,0,0);return ghost;
  }
+ function settle(){if(dropping){cancelAnimationFrame(dropping);dropping=0;renderer.setLift(0);}}
  function lift(ghost,up){
    if(!ghost)return;
    for(const old of scene.querySelectorAll('.ghost'))old.remove();
    scene.append(ghost);
-   const shift=(up?1:-1)*36,timing={duration:480,easing:'cubic-bezier(.3,.7,.2,1)'};
-   ghost.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY('+shift+'%)',opacity:0}],timing).onfinish=()=>ghost.remove();
-   for(const layer of [model,pins,tip])layer.animate([{transform:'translateY('+(-shift)+'%)',opacity:0},{transform:'translateY(0)',opacity:1}],timing);
+   if(!up){
+     ghost.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(-10%)',opacity:0}],{duration:380,easing:'ease-in'}).onfinish=()=>ghost.remove();
+     return;
+   }
+   ghost.animate([{opacity:1},{opacity:0}],{duration:240,easing:'ease-out'}).onfinish=()=>ghost.remove();
+   pins.animate([{opacity:0},{opacity:0,offset:.6},{opacity:1}],{duration:560});
+   const start=performance.now(),height=2.6,duration=560;
+   const step=now=>{
+     const k=Math.min(1,Math.max(0,(now-start)/duration));
+     renderer.setLift(height*Math.pow(1-k,3));
+     dropping=k<1?requestAnimationFrame(step):0;
+   };
+   step(start);
  }
  // Redraws the interior for one floor. A zone that is not on that floor hands over to the floor's first zone.
  function showFloor(level,reselect){
-   if(level!==floor){const ghost=snapshot(),up=level>floor;floor=level;renderer.setScene(m=>{anchors=buildInterior(m,floor)});lift(ghost,up);}
+   if(level!==floor){settle();const ghost=snapshot(),up=level>floor;floor=level;renderer.setScene(m=>{anchors=buildInterior(m,floor)});lift(ghost,up);}
    for(const b of floorButtons)b.setAttribute('aria-pressed',String(+b.dataset.floor===floor));
    if(reselect)choose(anchors[selected]?selected:floorStart[floor]);
  }

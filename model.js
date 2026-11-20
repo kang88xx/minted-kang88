@@ -4,7 +4,7 @@ function makeVenueRenderer(canvas) {
   const ctx = gl ? null : canvas.getContext('2d');
   const colorCtx = document.createElement('canvas').getContext('2d');
   const colors = new Map(), signs = new Map();
-  let shapes = [], angle = 32, elevation = 22, zoom = 1, frame, hits = [];
+  let shapes = [], angle = 32, elevation = 22, zoom = 1, frame, hits = [], extent = null, topLayer = false, lift = 0;
   let program, buffer, pos, uv, tint, useTexture;
   if (gl) {
     function shader(type, source) {
@@ -32,8 +32,8 @@ function makeVenueRenderer(canvas) {
     }
     return colors.get(key);
   }
-  function rect(points,fill,shade,group,image) { shapes.push({points,color:rgba(fill,shade),group,image}); }
-  function line(a,b,color='#686868',width=1,group) { shapes.push({points:[a,b],color:rgba(color),width,group}); }
+  function rect(points,fill,shade,group,image) { shapes.push({points,color:rgba(fill,shade),group,image,top:topLayer}); }
+  function line(a,b,color='#686868',width=1,group) { shapes.push({points:[a,b],color:rgba(color),width,group,top:topLayer}); }
   function box(x,y,z,w,d,h,fill='#dddddd',stroke='#767676',group) {
     const X=x+w,Y=y+d,Z=z+h;
     const p=[[x,y,z],[X,y,z],[X,Y,z],[x,Y,z],[x,y,Z],[X,y,Z],[X,Y,Z],[x,Y,Z]];
@@ -69,8 +69,11 @@ function makeVenueRenderer(canvas) {
     const w=canvas.clientWidth||canvas.width||1,h=canvas.clientHeight||canvas.height||1,ax=axes();
     let l=Infinity,r=-Infinity,b=Infinity,t=-Infinity;
     const include=(p)=>{const [x,y]=ax(p);l=Math.min(l,x);r=Math.max(r,x);b=Math.min(b,y);t=Math.max(t,y);};
-    for(const x of [-12.19,12.19])for(const y of [-8.535,8.535])for(const z of [0,0.1])include([x,y,z]);
-    shapes.forEach(s=>s.points.forEach(include));
+    if(extent)extent.forEach(include);
+    else{
+      for(const x of [-12.19,12.19])for(const y of [-8.535,8.535])for(const z of [0,0.1])include([x,y,z]);
+      shapes.forEach(s=>s.points.forEach(include));
+    }
     frame={w,h,ax,scale:zoom*.92*Math.min(w/(r-l),h/(t-b)),cx:(l+r)/2,cy:(t+b)/2};
   }
   function project(p){
@@ -84,7 +87,8 @@ function makeVenueRenderer(canvas) {
     const W=Math.max(1,Math.round(w*pr)),H=Math.max(1,Math.round(h*pr));
     if(canvas.width!==W)canvas.width=W;
     if(canvas.height!==H)canvas.height=H;
-    const projected=shapes.map(s=>({...s,p:s.points.map(project)}));
+    const raised=q=>project([q[0],q[1],q[2]+lift]);
+    const projected=shapes.map(s=>({...s,p:s.points.map(lift&&s.top?raised:project)}));
     if(gl){
       gl.useProgram(program);gl.viewport(0,0,W,H);gl.clearColor(0,0,0,0);gl.clearDepth(1);
       gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -158,7 +162,9 @@ function makeVenueRenderer(canvas) {
     return group;
   }
   const quad=(points,fill,shade=1,group)=>rect(points,fill,shade,group);
-  return {setScene(build){shapes=[];build({box,line,sign,quad});frame=null;draw();},
+  // top(true) marks the shapes that follow as the floor on show; setLift raises that floor by a height in metres.
+  return {setScene(build){shapes=[];topLayer=false;build({box,line,sign,quad,top(on){topLayer=!!on}});frame=null;draw();},
+    setExtent(points){extent=points;frame=null;},setLift(height){lift=height;draw();},
     setCamera(a,e,z=1){angle=a;elevation=e;zoom=Math.max(.1,z);frame=null;draw();},draw,project,hit};
 }
 
@@ -177,8 +183,15 @@ function real(m){
     line(a,b,color,width,group){m.line(P(a),P(b),color,width,group)},
     quad(points,fill,shade,group){m.quad(points.map(P),fill,shade,group)},
     sign(x0,h0,s,w,h,text,group,tone){m.sign(X(x0),Y(s),h0,w,h,text,group,tone)},
+    top(on){m.top(on)},
     at:(x,h,s)=>[X(x),Y(s),h]
   };
+}
+// Corner points that frame the interior drawing at one scale on every floor.
+function interiorExtent(){
+  const pts=[], top=KH.F[2]+1.2;
+  for(const x of [-.1,KH.W+.1])for(const s of [0,KH.D+.9])for(const h of [-.2,top])pts.push([x-KH.W/2,KH.D/2-s,h]);
+  return pts;
 }
 
 // Banner and sign positions from the venue's signage guide (width x height in metres).
@@ -289,8 +302,7 @@ function buildExterior(m) {
     signage:r.at(4.88,F[2]+1.45,D),entrance:r.at(10.975,1.5,D)};
 }
 
-// floor 1 cuts the camera-side walls 1.2 m above the ground floor. floor 2 draws the 2F plates
-// alone, cut 1.2 m above the slab, over a solid hatched base that stands for the open hall below.
+// Interior cutaway for one floor. See the stacking rule inside.
 function buildInterior(m,floor=1) {
   const r=real(m), {W,D,CW,XA,XM,XG,XE0,XE1,N1,N2,S20,SB,SS,F}=KH;
   const dark='#363636', steel='#5c5c5c', pale='#e2e2e2', timber='#a0a0a0', sage='#b6b6b6', teal='#646464', amber='#b0b0b0';
@@ -325,31 +337,24 @@ function buildInterior(m,floor=1) {
     r.line([a[0],h+.55,a[1]],[b[0],h+.55,b[1]],steel,.8,group);
     for(let i=0;i<=n;i++){const x=a[0]+(b[0]-a[0])*i/n,s=a[1]+(b[1]-a[1])*i/n;r.line([x,h,s],[x,h+1.1,s],dark,1.1,group)}
   }
-  // The venue's fixed 10 x 5 m LED screen on the east wall, drawn from height `from` up.
-  function screen(from){
-    r.box(24.0,Math.max(from,.35),3.535,24.2,5.35,13.535,dark,steel,'stage');
-    r.box(23.96,Math.max(from,.47),3.66,24.0,5.23,13.41,teal,dark,'stage');
-    for(let i=0;i<9;i++){const s=4.3+i*1.06;r.line([23.945,Math.max(from,.8),s],[23.945,4.9,s],'#878787',.45,'stage')}
+  // The venue's fixed 10 x 5 m LED screen on the east wall.
+  function screen(){
+    r.box(24.0,.35,3.535,24.2,5.35,13.535,dark,steel,'stage');
+    r.box(23.96,.47,3.66,24.0,5.23,13.41,teal,dark,'stage');
+    for(let i=0;i<9;i++){const s=4.3+i*1.06;r.line([23.945,.8,s],[23.945,4.9,s],'#878787',.45,'stage')}
   }
   // Indoor banner positions from the venue's signage guide.
-  function hallBanners(tall=true){
+  function hallBanners(wide,tall){
     const [ww,wh]=SIGNS.hallWide, [tw,th]=SIGNS.hallTall, h0=F[1]+(F[2]-F[1]-wh)/2;
-    // Wide: opposite the main entrance, on the 2F container above the north garage door.
-    r.box(XM,h0,N1,XM+ww,h0+wh,N1+.05,'#c8c8c8',steel,'hangwide');
-    r.sign(XM+.15,h0+.15,N1+.06,ww-.3,wh-.3,EVENT_NAME,'hangwide');
+    if(wide){   // opposite the main entrance, on the 2F container above the north garage door
+      r.box(XM,h0,N1,XM+ww,h0+wh,N1+.05,'#c8c8c8',steel,'hangwide');
+      r.sign(XM+.15,h0+.15,N1+.06,ww-.3,wh-.3,EVENT_NAME,'hangwide');
+    }
     if(!tall)return;
-    // Tall: right of the LED screen, on the north face of the lift shaft. Outline only, so it does not hide the hall.
+    // Right of the LED screen, on the north face of the lift shaft. Outline only, so it does not hide the hall.
     const x0=(XE0+XE1-tw)/2,x1=x0+tw,s=SS-.03,b=.15,t=b+th;
     for(const [p,q] of [[[x0,b,s],[x0,t,s]],[[x1,b,s],[x1,t,s]],[[x0,t,s],[x1,t,s]],[[x0,b,s],[x1,b,s]]])r.line(p,q,dark,1.6,'hangtall');
     for(let h=b+th/4;h<t-.1;h+=th/4)r.line([x0,h,s],[x1,h,s],steel,.7,'hangtall');
-  }
-  // Solid base in place of the floors below. Where no floor plate covers it, the hatching marks the void over the hall.
-  function voidBase(y){
-    wall(0,y-.5,0,W,y-.14,D,'#a6a6a6');
-    for(let c=-D+.4;c<W;c+=.7){
-      const a=c>=0?[c,y-.132,0]:[0,y-.132,-c], b=c+D<=W?[c+D,y-.132,D]:[W,y-.132,W-c];
-      r.line(a,b,'#8c8c8c',.5,'shared');
-    }
   }
   // Flat tread lines for a stair that leads down from the floor being drawn.
   function stairDown(along,a0,a1,from,to,h,group='facility'){
@@ -357,43 +362,55 @@ function buildInterior(m,floor=1) {
       if(along==='s')r.line([a0,h,p],[a1,h,p],dark,.9,group);else r.line([p,h,a0],[p,h,a1],dark,.9,group);
     }
   }
-  if(floor===2)return upperFloor();
-  if(floor===3)return thirdFloor();
+  // Street and west faces of a floor that lies below the one on show: LED window panels and the garage door glazing.
+  function outerFaces(k){
+    for(let i=0;i<4;i++)r.box(i*CW+.185,F[k]+.3,D,(i+1)*CW-.185,F[k]+2.6,D+.04,'#676767',dark,'shared');
+    for(let n=1;n<6;n++){const h=F[k]+n*(F[k+1]-F[k])/6;r.line([-.012,h,N2],[-.012,h,S20],steel,.9,'shared')}
+  }
+  // The floor on show is cut 1.2 m above its slab and sits on the floors below it, which are drawn whole.
+  // Only the atrium shows what is underneath.
+  if(floor===1)return firstFloor(false);
+  firstFloor(true);
+  if(floor===2){r.top(true);return upperFloor(false);}
+  upperFloor(true);
+  r.top(true);
+  return thirdFloor();
 
+  function firstFloor(whole){
+  const full=whole?F[1]-.14:F[1], low=whole?F[1]-.14:CUT;
   // ---- 1F shell ----
   wall(0,-.2,0,W,0,D,'#cdcdcd');
-  wall(0,0,0,XM,F[1],N1);                                    // kitchen, men's toilet and inner stair container
+  wall(0,0,0,XM,full,N1);                                    // kitchen, men's toilet and inner stair container
   r.sign(1.6,1.75,N1+.012,2.2,.42,['주방'],'shared');
   r.sign(8.4,1.75,N1+.012,3.1,.42,['화장실 (남)'],'facility');
   for(const s of [.35,1.45])r.box(XM,0,s,XM+.05,2.1,s+.8,'#8f8f8f','#4b4b4b','facility');   // stair door, toilet door
-  wall(0,0,N1,.6,F[1],N2);                                   // electrical room
-  wall(XG,0,0,W,F[1],N1);                                    // storage, outside the rental area
-  wall(XM,0,0,XG,F[1],.06,glass);                            // north garage door
+  wall(0,0,N1,.6,full,N2);                                   // electrical room
+  wall(XG,0,0,W,full,N1);                                    // storage, outside the rental area
+  wall(XM,0,0,XG,full,.06,glass);                            // north garage door
   for(let n=1;n<6;n++){
-    const h=n*F[1]/6,x=XM+n*(XG-XM)/6;
-    r.line([XM,h,.075],[XG,h,.075],steel,.8,'shared');r.line([x,0,.075],[x,F[1],.075],steel,.8,'shared');
+    const h=n*full/6,x=XM+n*(XG-XM)/6;
+    r.line([XM,h,.075],[XG,h,.075],steel,.8,'shared');r.line([x,0,.075],[x,full,.075],steel,.8,'shared');
   }
   wall(W-.08,0,N1,W,F[2],SS);                                // east container wall behind the screen
-  wall(XM,F[1],0,W,F[2],N1);                                 // 2F container over the north garage door
-  wall(XM-.12,0,N2-.12,XM+.12,F[1],N2+.12,dark);             // the one free-standing column
-  // West garage door, drawn as an open frame so it does not hide the hall.
-  wall(0,0,N2,.06,.08,S20,dark);
-  for(let n=0;n<=5;n++){const s=N2+n*(S20-N2)/5;r.line([.03,0,s],[.03,CUT,s],steel,1.2,'shared')}
-  for(let h=.4;h<=CUT+.01;h+=.4)r.line([.03,h,N2],[.03,h,S20],steel,.8,'shared');
+  if(!whole)wall(XM,F[1],0,W,F[2],N1);                       // 2F container over the north garage door
+  wall(XM-.12,0,N2-.12,XM+.12,full,N2+.12,dark);             // the one free-standing column
+  wall(0,0,N2,.06,whole?F[1]:CUT,S20,glass);                 // west garage door
+  if(whole)outerFaces(0);
+  else for(let h=.4;h<CUT;h+=.4)r.line([-.012,h,N2],[-.012,h,S20],steel,.9,'shared');
   stair('s',.15,1.25,10.6,6.1,0,F[1],'shared');              // up to the 2F balcony
-  wall(0,0,S20,.08,CUT,11.3);wall(0,0,13.1,.08,CUT,SB);      // west wall with the staff door
-  r.box(0,0,11.3,.05,CUT,13.1,'#8f8f8f','#4b4b4b','shared');
-  for(let i=0;i<=4;i++){const x=Math.min(i*CW,XA-.08);wall(x,0,SB,x+.08,CUT,D-.08)}   // four street-side bays
-  wall(0,0,D-.08,XA,CUT,D,dark);                             // LED window wall
+  wall(0,0,S20,.08,low,11.3);wall(0,0,13.1,.08,low,SB);      // west wall with the staff door
+  r.box(0,0,11.3,.05,Math.min(low,2.3),13.1,'#8f8f8f','#4b4b4b','shared');
+  for(let i=0;i<=4;i++){const x=Math.min(i*CW,XA-.08);wall(x,0,SB,x+.08,low,D-.08)}   // four street-side bays
+  wall(0,0,D-.08,XA,low,D,dark);                             // LED window wall
   // Glazed entrance vestibule, lift and the storage container with the main stair.
   const {x0:dx0,x1:dx1}=STREET_DOOR;
   for(const [x0,s0,x1,s1] of [[XA,D-.06,dx0,D],[dx1,D-.06,XM,D],[XA,SS,dx0,SS+.06],[dx1,SS,XE0,SS+.06],[XM-.03,SS+.06,XM+.03,D-.06]])
-    r.box(x0,0,s0,x1,CUT,s1,glass,steel,'gate');
-  wall(XM+.03,0,D-.08,XE0,CUT,D);                            // container wall east of the entrance bay
+    r.box(x0,0,s0,x1,low,s1,glass,steel,'gate');
+  wall(XM+.03,0,D-.08,XE0,low,D);                            // container wall east of the entrance bay
   drawStreetEntrance(r,'gate');
-  wall(XE0,0,SS,XE1,CUT,D,dark);
-  wall(XE1,0,SS,W,CUT,D);
-  hallBanners();
+  wall(XE0,0,SS,XE1,whole?F[1]:CUT,D,dark);
+  wall(XE1,0,SS,W,low,D);
+  hallBanners(!whole,true);
 
   // ---- 1F event layout ----
   // Existing bar counters in front of the kitchen serve the catering.
@@ -411,7 +428,7 @@ function buildInterior(m,floor=1) {
   // Stage in front of the LED screen.
   r.box(20.4,0,3.2,23.95,SH,13.9,dark,steel,'stage');
   for(let j=1;j<=2;j++)r.box(20.4-.3*j,0,7.75,20.4-.3*(j-1),SH-.15*j,9.35,pale,steel,'stage');
-  screen(0);
+  screen();
   const trend=[0,.52,.34,.92,.64,1.04,.88,1.37,1.6];
   for(let i=0;i<8;i++){const s=4.3+i*1.06;r.line([23.94,1.7+trend[i]*1.5,s],[23.94,1.7+trend[i+1]*1.5,s+1.06],'#e0e0e0',2,'stage')}
   r.box(20.72,SH,8.32,21.02,SH+1.1,8.78,steel,dark,'stage');                            // host lectern
@@ -446,19 +463,17 @@ function buildInterior(m,floor=1) {
   return {stage:r.at(23.95,3.9,8.5),players:r.at(21.5,SH+1.05,5.7),seats:r.at(15.5,.9,8.55),tech:r.at(10.8,1.45,8.55),
     booth:r.at(3.66,1.1,14.75),gate:r.at(8.5,1.15,13.98),buffet:r.at(4.6,1.25,4.68),shared:r.at(.03,1.3,7.9),facility:r.at(11.95,1.96,N1),
     hangwide:r.at(XM+SIGNS.hallWide[0],F[1]+.25+SIGNS.hallWide[1],N1),hangtall:r.at((XE0+XE1)/2,.15+SIGNS.hallTall[1],SS)};
+  }
 
-  function upperFloor(){
-    const y=F[1], cut=y+CUT, slab=(x0,s0,x1,s1,group='shared')=>r.box(x0,y-.14,s0,x1,y,s1,deck,steel,group);
-    voidBase(y);
-    stairDown('s',.15,1.25,6.1,9.95,y-.13);                    // stair down to the hall
-    wall(W-.08,y-.5,N1,W,F[2],SS);                             // east container wall
-    screen(y-.14);                                             // top half of the LED screen, for orientation
+  function upperFloor(whole){
+    const y=F[1], cut=whole?F[2]-.14:y+CUT, back=whole?F[2]-.14:F[2], slab=(x0,s0,x1,s1,group='shared')=>r.box(x0,y-.14,s0,x1,y,s1,deck,steel,group);
     wall(XM-.12,y-.14,N2-.12,XM+.12,cut,N2+.12,dark);
-    for(let n=0;n<=5;n++){const s=N2+n*(S20-N2)/5;r.line([.03,y-.14,s],[.03,cut,s],steel,1.2,'shared')}   // west garage door, upper half
-    for(let h=y+.4;h<=cut+.01;h+=.4)r.line([.03,h,N2],[.03,h,S20],steel,.8,'shared');
+    wall(0,y,N2,.06,whole?F[2]:cut,S20,glass);                 // west garage door, upper half
+    if(whole)outerFaces(1);
+    else for(let h=y+.4;h<cut;h+=.4)r.line([-.012,h,N2],[-.012,h,S20],steel,.9,'shared');
     // North gallery room: VIP lounge behind the LED glass that faces the hall.
     slab(0,0,XM,N2,'vip');
-    wall(0,y,0,XM,F[2],.08);
+    wall(0,y,0,XM,back,.08);
     wall(0,y,.08,.08,cut,N2-.08);
     wall(XM-.08,y,N1,XM,cut,N2-.12);
     wall(0,y,N2-.08,.7,cut,N2);wall(2.3,y,N2-.08,2.6,cut,N2);
@@ -471,10 +486,10 @@ function buildInterior(m,floor=1) {
       r.box(x+.5,y,4.2,x+1.3,y+.38,4.62,timber,steel,'vip');
     }
     r.box(1.0,y,1.6,2.6,y+1.1,2.15,teal,steel,'vip');
-    wall(XM,y-.14,0,W,F[2],N1);                                // women's toilet container
+    wall(XM,y-.14,0,W,back,N1);                                // women's toilet container
     r.sign(19.4,y+1.45,N1+.012,3.1,.42,['화장실 (여)'],'facility');
     r.box(XM-.05,y,1.4,XM,cut,2.3,'#8f8f8f','#4b4b4b','facility');   // toilet door, reached through the north room
-    hallBanners(false);
+    hallBanners(true,false);
     // West balcony around the stair, with the second camera.
     slab(0,N2,3.55,6.1,'rail');slab(2.5,6.1,3.55,9.95,'rail');slab(0,9.95,XA,S20,'rail');
     for(const [a,b] of [[[3.55,N2],[3.55,9.95]],[[3.55,9.95],[XA,9.95]],[[2.5,6.1],[2.5,9.95]],[[1.25,6.1],[2.5,6.1]],[[.1,9.95],[2.5,9.95]],[[XA,9.95],[XA,SS]],[[XA,SS],[XE0,SS]]])
@@ -496,7 +511,7 @@ function buildInterior(m,floor=1) {
     slab(7.32,S20,XA,D);slab(XA,SS,W,D);
     wall(XA,y,D-.08,XE0,cut,D);wall(XE1,y,D-.08,W-.08,cut,D);
     wall(W-.08,y,SS,W,cut,D);
-    wall(XE0,y-.14,SS,XE1,cut,D,dark);
+    wall(XE0,y,SS,XE1,whole?F[2]:cut,D,dark);
     r.box(XE1,y,SS,W-.08,cut,SS+.05,glass,steel,'shared');
     stair('x',15.5,16.5,19.0,23.0,y,F[2],'shared',cut);
     r.box(12.4,y+.72,14.8,14.2,y+.76,15.4,pale,steel,'cast');
@@ -508,10 +523,9 @@ function buildInterior(m,floor=1) {
   }
   function thirdFloor(){
     const {XV}=KH, y=F[2], cut=y+CUT, RAIL=3.66, slab=(x0,s0,x1,s1,group='shared')=>r.box(x0,y-.14,s0,x1,y,s1,deck,steel,group);
-    voidBase(y);
     // North: toilet, inner stair and the corridor to the rooms.
     slab(0,0,XM,N2);
-    wall(0,y,0,XV,F[3],.08);
+    wall(0,y,0,XV,cut,.08);
     wall(0,y,.08,.08,cut,D-.08);
     wall(.08,y,N1-.08,3.3,cut,N1);                             // toilet: two cubicles in the north-west corner
     wall(3.72,y,.08,3.8,cut,1.3);
@@ -546,8 +560,8 @@ function buildInterior(m,floor=1) {
     wall(XV,y,.08,XV+.08,cut,1.6,shell,'gallery');wall(XV,y,3.2,XV+.08,cut,RAIL,shell,'gallery');
     r.box(XV,y,RAIL,XV+.06,cut,14.47,glass,steel,'gallery');   // LED glass facing the hall
     for(let n=1;n<6;n++){const s=RAIL+n*(14.47-RAIL)/6;r.line([XV-.015,y,s],[XV-.015,cut,s],steel,1,'gallery')}
-    wall(XV,y,0,W,F[3],.08,shell,'gallery');
-    wall(W-.08,y,.08,W,F[3],14.47,shell,'gallery');
+    wall(XV,y,0,W,cut,.08,shell,'gallery');
+    wall(W-.08,y,.08,W,cut,14.47,shell,'gallery');
     wall(XV,y,14.39,W-.08,cut,14.47,shell,'gallery');
     for(let c=1.2;c<14;c+=1.2)r.line([XV+.1,y+.006,c],[W-.1,y+.006,c],'#a9a9a9',.5,'gallery');
     // South: landing, lift and the stair down.
@@ -556,7 +570,7 @@ function buildInterior(m,floor=1) {
     wall(XA,y,D-.08,XE0,cut,D);wall(XE1,y,D-.08,W-.08,cut,D);
     wall(W-.08,y,SS,W,cut,D);
     wall(XM,y,SS,12.6,cut,SS+.08);wall(13.6,y,SS,XE0,cut,SS+.08);wall(XE1,y,SS,W-.08,cut,SS+.08);
-    wall(XE0,y-.14,SS,XE1,cut,D,dark);
+    wall(XE0,y,SS,XE1,cut,D,dark);
     stairDown('x',15.5,16.5,19.0,23.0,y+.012);
     return {rooms:r.at(3*CW,cut,9.6),gallery:r.at(20.7,y+.5,7.3),facility:r.at(1.9,cut,N1),shared:r.at(15.55,cut,15.85)};
   }
