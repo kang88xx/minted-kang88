@@ -20,7 +20,7 @@ const base=process.argv[2];
     // a 2F-only zone picked from the list switches the drawing to 2F
     await side.locator('.area[data-id=cast]').click();
     assert.equal(await pressed(),'2'); assert.equal(await sel(),'cast');
-    assert.deepEqual(await pins(),['booth','hangwide','vip','cast','facility']);
+    assert.deepEqual(await pins(),['booth','hangwide','vip','cast','control','facility']);
     // switching back by hand deselects a zone that is not on that floor
     await inside.locator('.floors button[data-floor="1"]').click();
     assert.equal(await pressed(),'1'); assert.equal(await sel(),null);
@@ -64,7 +64,7 @@ const base=process.argv[2];
     // schedule layer opens and closes; the hint text is gone; no insurance row; priced rows add up
     await page.locator('.tabs [data-open=schedule]').click();
     assert.equal(await page.locator('#schedule').evaluate(d=>d.open),true);
-    assert.equal(await page.locator('#schedule .timeline tr').count(),30);
+    assert.equal(await page.locator('#schedule .timeline tr').count(),33);
     const fits=await page.locator('#schedule').evaluate(d=>{const r=d.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1});
     assert.ok(fits,'schedule layer fits the viewport');
     await page.locator('#schedule [data-close]').click();

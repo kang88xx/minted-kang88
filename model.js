@@ -651,13 +651,19 @@ function buildInterior(m,floor=1) {
     wall(XE0,y,SS,XE1,whole?F[2]:cut,D,dark);
     r.box(XE1,y,SS,W-.08,cut,SS+.05,glass,steel,'shared');
     stair('x',15.5,16.5,19.0,23.0,y,F[2],'shared',cut);
-    // Technical team: video output, streaming and sound, overlooking the hall and the screen.
+    // Commentary desk on the south walkway: hall and screen in one view, backdrop behind the three seats.
     r.box(11.9,y+.72,14.8,14.5,y+.76,15.4,pale,steel,'cast');
     r.box(11.9,y,14.8,14.5,y+.72,14.84,pale,steel,'cast');
     for(const x of [12.05,12.75,13.45])r.box(x,y+.86,14.95,x+.55,y+1.2,14.99,dark,steel,'cast');   // monitors
-    r.box(14.0,y+.76,15.0,14.45,y+.84,15.35,dark,steel,'cast');                                      // sound mixer
     for(const x of [12.2,13.0,13.8])chair(x,y,15.55,'+s','cast');
-    return {booth:r.at(4.3,y+1.1,1.9),vip:r.at(3.9,y+1.3,13.4),cast:r.at(13.3,y+1.0,15.1),rail:r.at(3.55,y+1.1,7.4),shared:r.at(15.55,cut,15.85),facility:r.at(XM-.35,y+1.7,1.85),   // the women's toilet door, reached through the north room
+    r.box(11.8,y,16.86,14.4,cut,16.92,dark,steel,'cast');                                            // backdrop behind the commentators
+    // Broadcast and lighting control in the corridor, at the rail that looks straight at the stage.
+    r.box(9.0,y+.72,11.4,9.6,y+.76,13.6,pale,steel,'control');
+    r.box(9.56,y,11.4,9.6,y+.72,13.6,pale,steel,'control');
+    for(const s of [11.6,12.3,13.0])r.box(9.3,y+.86,s,9.34,y+1.2,s+.5,dark,steel,'control');        // monitors
+    r.box(9.05,y+.76,13.1,9.28,y+.84,13.5,dark,steel,'control');                                     // sound mixer
+    for(const s of [11.65,12.35,13.05])chair(8.48,y,s,'-x','control');
+    return {booth:r.at(4.3,y+1.1,1.9),vip:r.at(3.9,y+1.3,13.4),cast:r.at(13.3,y+1.0,15.1),control:r.at(9.3,y+1.0,12.5),rail:r.at(3.55,y+1.1,7.4),shared:r.at(15.55,cut,15.85),facility:r.at(XM-.35,y+1.7,1.85),   // the women's toilet door, reached through the north room
       
       hangwide:r.at(XM+SIGNS.hallWide[0],y+.25+SIGNS.hallWide[1],N1)};
   }

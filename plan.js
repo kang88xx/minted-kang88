@@ -5,11 +5,11 @@ const views = [
   {id:'outside', title:t('Exterior view','외관 입체도'), areaTitle:t('Exterior zones','외관 구역'), angle:-32, elevation:15,
    zones:['banner','topbanner','signage','entrance']},
   {id:'inside', title:t('Interior cutaway','내부 절개 투시도'), areaTitle:t('Interior zones','내부 구역'), angle:-32, elevation:35,
-   zones:['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','vip','cast','rooms','interview','gallery','facility']}
+   zones:['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','vip','cast','control','rooms','interview','gallery','facility']}
 ];
 // Floors each interior zone is drawn on. Zones not listed here appear on every floor.
 const zoneFloors = {stage:[1], players:[1], seats:[1], gate:[1], door:[1], buffet:[1], hangtall:[1], booth:[1,2], hangwide:[1,2],
-  vip:[2], cast:[2], rooms:[3], interview:[3], gallery:[3]};
+  vip:[2], cast:[2], control:[2], rooms:[3], interview:[3], gallery:[3]};
 // Sizes of banner, sign and LED positions, shown with the zone name on the drawing.
 const specs = {banner:'11,820 × 5,680 mm', topbanner:'9,700 × 2,800 mm', signage:'약 2,070 × 2,300 mm × 12면', glass:'LED 아님 · 일반 유리 1면', entrance:'사인 2,400 × 520 mm',
   stage:'10,000 × 5,000 mm', hangwide:'6,300 × 2,380 mm', hangtall:'2,430 × 5,540 mm'};
@@ -66,9 +66,9 @@ const zones = {
   entrance:['관객 출입구','안내 3명',
     'LED 창 오른쪽 쌍문으로 들어서면 유리 전실을 지나 홀 안쪽 등록대로 이어집니다. 문 위 사인은 교체할 수 있고 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 등록대와 같은 안내 스태프 3명이 티켓을 확인하고 입장 팔찌를 채웁니다. 대관 시 무료 주차는 3대입니다. 차량 통제는 협의 중입니다.'],
   stage:[t('Main LED screen','메인 LED 스크린'),t('East wall · 10 × 5 m','동쪽 벽 고정 · 10 × 5 m'),
-    t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 테크니컬 팀이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
+    t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 방송·조명 컨트롤이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
   players:[t('Main stage & competitor desks','메인 무대 · 선수 데스크'),t('Stage 10.70 × 3.90 m','무대 10.70 × 3.90 m · 선수 8석 · MC 1명'),
-    t('Main stage and desks.','LED 스크린 앞에, 객석 쪽으로 꼭짓점이 튀어나온 오각형 무대를 둡니다(시안 A). 폭 10.70 m, 깊이 3.90 m, 높이 0.6 m이고, 위 모서리를 따라 흰 LED 띠를 두르고 비스듬한 두 면 스커트에 출력물을 붙입니다. 선수 데스크 8개는 사선 모서리를 따라 한쪽에 4석씩 놓습니다. 선수는 가운데 통로를 등지고 바깥쪽 객석을 봐서, 같은 쪽 객석에서는 얼굴 정면, 반대쪽에서는 옆얼굴이 보입니다. 모니터는 얼굴을 가리지 않게 데스크 바깥쪽 끝에 낮게 둡니다. MC는 앞 꼭짓점에 서고, 계단은 앞 꼭짓점과 북쪽 크루용 두 곳입니다. 심판·경기 진행 인력 2명과 예비 PC 2세트를 둡니다. 무대 위를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 각진 모양이라 대관처 기본 무대(6 × 2 m)로는 만들 수 없어 제작 무대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 시안 B(뒷줄은 객석, 앞줄은 스크린을 봄)는 아래 버튼에서 비교할 수 있습니다.')],
+    t('Main stage and desks.','LED 스크린 앞에, 객석 쪽으로 꼭짓점이 튀어나온 오각형 무대를 둡니다(시안 A). 폭 10.70 m, 깊이 3.90 m, 높이 0.6 m이고, 위 모서리를 따라 흰 LED 띠를 두르고 비스듬한 두 면 스커트에 출력물을 붙입니다. 선수 데스크 8개는 사선 모서리를 따라 한쪽에 4석씩 놓습니다. 본선은 한 경기에 4명이 뛰어 한쪽에 2석씩 쓰고, 8석 전체는 20일 쇼매치(결승 진출자 4명 + 크리에이터 4명 제안)에 씁니다. 선수는 가운데 통로를 등지고 바깥쪽 객석을 봐서, 같은 쪽 객석에서는 얼굴 정면, 반대쪽에서는 옆얼굴이 보입니다. 모니터는 얼굴을 가리지 않게 데스크 바깥쪽 끝에 낮게 둡니다. MC는 앞 꼭짓점에 서고, 계단은 앞 꼭짓점과 북쪽 크루용 두 곳입니다. 심판·경기 진행 인력 2명과 예비 PC 2세트를 둡니다. 무대 위를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 각진 모양이라 대관처 기본 무대(6 × 2 m)로는 만들 수 없어 제작 무대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 시안 B(뒷줄은 객석, 앞줄은 스크린을 봄)는 아래 버튼에서 비교할 수 있습니다.')],
   seats:[t('Audience seating','관객석'),t('112 seats · 2 blocks of 8 × 7','관람 112석 · 8석 × 7열 2블록'),
     t('Two blocks of seven rows by eight chairs face the stage, with a centre aisle between them. The rear rows sit under the open atrium. The plan is for 500 guests, so most stand: in the lounge behind the seating and at the 2nd-floor railings. About 100 of the chairs can be the venue\'s free house chairs. Confirm aisles, accessible seating, exits and equipment clearances before fixing capacity.','무대를 향해 8석 × 7열 두 블록, 의자 112석을 배치한 제안입니다. 두 블록 사이에 가운데 통로를 두었고 뒤쪽 열은 아트리움 아래에 놓입니다. 계획 인원이 500명이라 대부분은 서서 봅니다. 객석 뒤 라운지와 2층 난간을 씁니다. 의자는 대관처 보유분 114개(접이식 50개 포함)를 먼저 쓰고 모자라는 만큼만 빌립니다. 통로, 휠체어석, 출입구와 장비 간격을 반영한 정원은 대관처와 확인합니다.')],
   booth:[t('Partner booths','파트너 부스'),t('7 booths · 3 shared crew','부스 7곳 · 공용 인력 3명'),
@@ -93,8 +93,10 @@ const zones = {
     '화장실은 층마다 북쪽에 있습니다. 1층은 남자 화장실로, 주방 옆 컨테이너의 동쪽 끝 문으로 들어갑니다. 2층은 여자 화장실로, 북쪽 전시실 동쪽 끝 문을 지나야 합니다. 3층은 북서쪽 모서리에 2칸이 있습니다. 승강기는 남쪽 가로변 가운데에 있습니다. 북쪽 내부 계단이 1–3층을 잇고, 서쪽 계단은 1층 홀에서 2층 발코니로 올라갑니다.'],
   vip:[t('VIP room & player waiting','VIP룸 · 선수 대기존'),t('2F south-west room','2층 남서 전시실 · 약 7.3 × 6.1 m'),
     t('VIP room and player waiting zone.','2층 남서 전시실을 낮은 칸막이로 나눠, 서쪽은 소파와 낮은 테이블을 둔 VIP룸, 동쪽은 테이블 1개와 의자 8개를 둔 선수 대기존으로 씁니다. 1층 무대와 가깝고 북쪽 계단으로 바로 내려갈 수 있어 선수 호출이 쉽습니다. 소파는 대관처 팔걸이 의자(20개 보유)로 대신할 수 있습니다. 짐 보관과 휴식은 3층 B룸을, 인터뷰는 3층 A룸을 씁니다.')],
-  cast:[t('Technical team','테크니컬 팀'),t('2F south walkway','2층 남쪽 통로 · 영상 송출·음향'),
-    t('Video output, streaming and sound.','홀과 스크린이 내려다보이는 2층 남쪽 통로에 테크니컬 팀 자리를 둡니다. 스크린 송출, 중계 화면 전환, 음향 믹서를 이곳에서 운영하며 모니터 3대와 3석을 가정합니다. 무대와 스크린이 한눈에 보이고 관객 동선과 겹치지 않습니다. 1층 무대·스크린까지 영상·음향 케이블 경로와 전원은 대관처와 확인합니다.')],
+  cast:['중계 해설석','2층 남쪽 통로 · 해설 3석',
+    '출입구 위 2층 남쪽 통로의 난간 앞에 중계 해설석을 둡니다. 홀과 스크린이 한눈에 보이는 자리로, 캐스터와 해설 3석, 모니터 3대, 뒤쪽 배경 가림막을 가정합니다. 통로 깊이가 약 2.4 m라 데스크를 난간 쪽에 붙이고, 의자 뒤로 승강기까지 가는 길을 비워 둡니다. 해설 음성은 복도의 방송·조명 컨트롤로 보내 중계와 장내 음향에 섞습니다.'],
+  control:['방송·조명 컨트롤','2층 복도 · 무대 정면 · 3석',
+    '무대를 정면으로 내려다보는 2층 복도 난간 앞에 방송·조명 컨트롤을 둡니다. 스크린 송출, 중계 화면 전환, 음향 믹서, 조명 조작을 이곳에서 하며 모니터 3대와 3석을 가정합니다. 위층에 두면 1층 전체를 관객에게 쓸 수 있고 관객 동선과 겹치지 않습니다. 의자 뒤로 약 1.1 m 통로가 남아 VIP룸·선수 대기존 문으로 드나들 수 있습니다. 1층 무대·스크린까지 영상·음향 케이블 경로와 전원은 대관처와 확인합니다.'],
   rail:[t('Balcony & standing rail','발코니·스탠딩 관람'),t('2F · balcony camera','2층 · 발코니 카메라'),
     t('Standing guests can watch from the west balcony and the walkway railings on the 2nd floor. A camera on the balcony covers the stage and the audience. Confirm with the venue how many people the balcony may hold.','서서 보는 관객은 2층 서쪽 발코니와 통로 난간에서 관람할 수 있습니다. 발코니의 카메라가 무대와 객석을 잡습니다. 발코니 허용 인원은 대관처와 확인합니다.')]
 };
