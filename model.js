@@ -668,19 +668,23 @@ function buildInterior(m,floor=1) {
     for(let x=x0+.35,i=0;x+1<x1;x+=1.3,i++)r.box(x,1.1,4.52,x+.9,1.2,4.84,[amber,sage,'#8b8b8b'][i%3],steel,'buffet');
   }
   r.sign(7.4,.3,4.86,3.6,.45,[korean ? '바 / 케이터링' : 'BAR / CATERING'],'buffet');
-  for(const [x,s,g] of [[2.7,7.6,'lounge'],[4.3,8.0,'lounge'],[5.9,7.5,'lounge'],[7.9,6.5,'buffet'],[4.2,10.2,'buffet'],[6.7,10.5,'buffet'],[8.5,9.0,'buffet']]){   // standing tables: three in the lounge, four around it
-    r.box(x-.3,1.05,s-.3,x+.3,1.1,s+.3,pale,steel,g);
-    r.box(x-.04,.03,s-.04,x+.04,1.05,s+.04,steel,'none',g);
-    r.box(x-.2,0,s-.2,x+.2,.03,s+.2,steel,'none',g);
+  // Standing tables for eating: a 2 x 2 grid east of the lounge, 1.7 m clear of the bar front so the bar queue has room.
+  for(const x of [8.0,9.7])for(const s of [6.9,8.5]){
+    r.box(x-.3,1.05,s-.3,x+.3,1.1,s+.3,pale,steel,'buffet');
+    r.box(x-.04,.03,s-.04,x+.04,1.05,s+.04,steel,'none','buffet');
+    r.box(x-.2,0,s-.2,x+.2,.03,s+.2,steel,'none','buffet');
   }
-  // Lounge in front of the bar, about 30% smaller than the one in the received plan (5.25 x 2.95 m against 7.5 x 4.2 m):
-  // a carpet marks the area, two benches back onto the bar aisle, and a small desk carries the sign.
+  // Lounge in front of the bar, about 30% smaller than the one in the received plan (5.25 x 2.95 m against 7.5 x 4.2 m).
+  // A carpet marks the area. Two sets side by side: a bench on each side of a low table, facing each other.
+  // The sign desk stands at the corner nearest the reception.
   r.box(1.6,0,6.0,6.85,.012,8.95,'#b9b9b9','none','lounge');
-  for(const x0 of [2.0,4.25]){
-    r.box(x0,0,6.2,x0+1.8,.42,6.75,sage,steel,'lounge');r.box(x0,0,6.1,x0+1.8,.82,6.2,teal,steel,'lounge');
+  for(const x0 of [1.9,4.0]){
+    r.box(x0,0,6.2,x0+1.8,.42,6.75,sage,steel,'lounge');r.box(x0,0,6.1,x0+1.8,.82,6.2,teal,steel,'lounge');       // bench facing south
+    r.box(x0+.3,0,7.2,x0+1.5,.42,7.7,pale,steel,'lounge');                                                          // low table
+    r.box(x0,0,8.15,x0+1.8,.42,8.7,sage,steel,'lounge');r.box(x0,0,8.7,x0+1.8,.82,8.8,teal,steel,'lounge');        // bench facing north
   }
-  r.box(1.75,0,8.35,2.85,1.0,8.8,pale,steel,'lounge');
-  r.sign(1.8,.25,8.81,1.0,.5,[korean ? '라운지' : 'LOUNGE'],'lounge');
+  r.box(6.05,0,8.35,6.75,1.0,8.8,pale,steel,'lounge');
+  r.sign(6.07,.25,8.81,.66,.5,[korean ? '라운지' : 'LOUNGE'],'lounge');
   if(STAGE_VARIANT!=='line')thrustStage(STAGE_VARIANT==='draftA',STAGE_VARIANT==='draftB');
   else{
   // Stage in front of the LED screen.

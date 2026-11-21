@@ -288,3 +288,8 @@ header details {justify-self:start;}
 .screens figcaption {font-size:13px;font-weight:600;margin-bottom:6px;}
 .screens canvas {display:block;width:100%;height:auto;border-radius:8px;}
 @media(max-width:800px){.screens {grid-template-columns:minmax(0,1fr);}}
+/* Schedule pop-up: the online qualifier block above the two event days */
+.pre {margin-bottom:24px;}
+.pre h3 {margin:0 0 8px;font-size:15px;letter-spacing:-.03em;}
+.pre h3 span {display:block;color:var(--muted);font-size:12px;font-weight:500;letter-spacing:0;}
+.roster .seat {width:4.6em;white-space:nowrap;}
