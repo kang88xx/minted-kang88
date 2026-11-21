@@ -282,3 +282,9 @@ header details {justify-self:start;}
  .pin{width:24px;height:24px;font-size:9px;}
  .pin.icon svg{width:13px;height:13px;}
 }
+/* Screen design pop-up: the main LED screen's pictures at full size */
+.screens {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+.screens figure {margin:0;}
+.screens figcaption {font-size:13px;font-weight:600;margin-bottom:6px;}
+.screens canvas {display:block;width:100%;height:auto;border-radius:8px;}
+@media(max-width:800px){.screens {grid-template-columns:minmax(0,1fr);}}

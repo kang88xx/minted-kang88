@@ -134,6 +134,7 @@ function makeVenueRenderer(canvas) {
               for(const k of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,k,gl.CLAMP_TO_EDGE);
               for(const k of [gl.TEXTURE_MAG_FILTER,gl.TEXTURE_MIN_FILTER])gl.texParameteri(gl.TEXTURE_2D,k,gl.LINEAR);
               gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,s.image.img);
+              if(s.image.mip){gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);}
             }else gl.bindTexture(gl.TEXTURE_2D,s.image.tex);
           }
           for(const i of [0,1,2,0,2,3])vertex(p[i],i===1||i===2?1:0,i>1?1:0);
@@ -181,7 +182,7 @@ function makeVenueRenderer(canvas) {
   // A painted picture on any flat quad. Points run top-left, top-right, bottom-right, bottom-left as the viewer reads it.
   // The canvas is painted once per key and kept, so a scene that is rebuilt often reuses its textures.
   function picture(points,key,w,h,paint,group){
-    if(!signs.has(key)){const img=document.createElement('canvas');img.width=w;img.height=h;paint(img.getContext('2d'),w,h);signs.set(key,{img});}
+    if(!signs.has(key)){const img=document.createElement('canvas');img.width=w;img.height=h;paint(img.getContext('2d'),w,h);signs.set(key,{img,mip:!(w&(w-1))&&!(h&(h-1))});}
     rect(points,'#ffffff',1,group,signs.get(key));
   }
   // top(true) marks the shapes that follow as the floor on show; setLift raises that floor by a height in metres.
@@ -220,67 +221,172 @@ function interiorExtent(){
 // Banner and sign positions from the venue's signage guide (width x height in metres).
 var LED_MODE=0;   // exterior LED content type shown, cycled by the page
 var SCREEN_MODE=0;   // main LED screen content shown, cycled by the page
-// The four pictures the main LED screen cycles through: title, live ranking, a trader's chart and the session vote.
-// Each paints a W x H canvas; shapes are kept large because the screen is small in the drawing.
+// The five pictures the main LED screen cycles through: title, ranking of eight with profile pictures, the desk
+// webcams, a two-trader comparison and the session vote. Each paints a W x H canvas in a broadcast look:
+// a slanted title tab, a clock on the right and a credit strip along the bottom.
+// Names and figures are examples. A power-of-two size lets the renderer build mipmaps, so small text stays clean.
+const SCREEN_SIZE=[1024,512];
 const SCREENS=(()=>{
-  const face=' system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif', UP='#3ddc84', DOWN='#ff5c6c', INK='#ffffff', DIM='#a9b0d6';
-  const ground=(c,W,H)=>{const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1a1d4a');g.addColorStop(1,'#0e1030');c.fillStyle=g;c.fillRect(0,0,W,H);};
-  const text=(c,s,x,y,size,color,align='left',weight=700,style='')=>{c.font=style+' '+weight+' '+size+'px'+face;c.fillStyle=color;c.textAlign=align;c.textBaseline='middle';c.fillText(s,x,y);};
-  const fit=(c,s,maxW,size,weight,style)=>{c.font=style+' '+weight+' '+size+'px'+face;return Math.min(size,size*maxW/Math.max(1,c.measureText(s).width));};
-  const head=(c,W,title,right,rightColor=DIM)=>{
-    c.fillStyle='#ffffff14';c.fillRect(0,0,W,58);text(c,title,24,30,24,INK);if(right)text(c,right,W-24,30,24,rightColor,'right');
-  };
+  const face=' system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  const UP='#3ddc84', DOWN='#ff5c6c', INK='#ffffff', DIM='#a9b0d6', GOLD='#f2c14e', NIGHT='#0b0d26', VIO='#8d93ff';
+  const MEDAL=['#f2c14e','#cfd6e6','#d08b5b'];
+  // Eight example traders on stage: handle, return in percent, change of rank since the last update.
+  const TRADERS=[['MINT',18.6,1],['NOGGLE',12.4,-1],['SEOUL',9.1,0],['ONYX',7.8,2],['KIMCHI',3.2,-1],['DELTA',1.9,0],['GAMMA',-2.4,-1],['VEGA',-5.7,0]];
+  const TONES=['#f4c9a4','#e2a77c','#c98a5e','#f1d3b8','#a86f4a','#eab892','#d9a07a','#8a5a3c'];
+  const HUES=['#3ddc84','#8d93ff','#f2c14e','#ff8a5c','#5cc8ff','#ff6fb5','#b6e35c','#c79bff'];
+  const pct=v=>(v<0?'−':'+')+Math.abs(v).toFixed(1)+'%';
+  const font=(size,weight,style)=>(style?style+' ':'')+weight+' '+size+'px'+face;
+  const text=(c,s,x,y,size,color,align='left',weight=700,style='')=>{c.font=font(size,weight,style);c.fillStyle=color;c.textAlign=align;c.textBaseline='middle';c.fillText(s,x,y);};
+  const fit=(c,s,maxW,size,weight,style)=>{c.font=font(size,weight,style);return Math.min(size,size*maxW/Math.max(1,c.measureText(s).width));};
+  const box=(c,x,y,w,h,r)=>{r=Math.min(r,w/2,h/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();};
+  const dot=(c,x,y,r,color)=>{c.fillStyle=color;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();};
+  const glow=(c,x,y,r,color)=>{const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,color.slice(0,7)+'00');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);};
+  const shade=(c,x0,x1,from,to)=>{const g=c.createLinearGradient(x0,0,x1,0);g.addColorStop(0,from);g.addColorStop(1,to);return g;};
+  function ground(c,W,H){
+    c.fillStyle=NIGHT;c.fillRect(0,0,W,H);
+    glow(c,W*.12,H*.05,560,'#4b3fd966');glow(c,W*.95,H*1.05,460,'#1fae6340');
+    c.fillStyle='#ffffff07';for(let x=64;x<W;x+=64)c.fillRect(x,0,1,H);for(let y=64;y<H;y+=64)c.fillRect(0,y,W,1);
+  }
+  // Broadcast frame: slanted title tab, a clock or note on the right (with a LIVE tag while a match runs), credit strip below.
+  function frame(c,W,H,title,right,rightColor=INK,live=false){
+    ground(c,W,H);
+    c.font=font(26,800);const tab=c.measureText(title).width+78;
+    c.fillStyle=UP;c.beginPath();c.moveTo(0,0);c.lineTo(tab,0);c.lineTo(tab-28,56);c.lineTo(0,56);c.fill();
+    c.fillStyle='#ffffff26';c.fillRect(0,56,W,2);
+    text(c,title,24,29,26,NIGHT,'left',800);
+    text(c,right,W-24,29,28,rightColor,'right',800);
+    if(live){const x=W-24-c.measureText(right).width-86;c.fillStyle=DOWN;box(c,x,15,70,28,6);c.fill();dot(c,x+13,29,4,INK);text(c,'LIVE',x+41,30,16,INK,'center',800);}
+    c.fillStyle='#00000066';c.fillRect(0,H-34,W,34);c.fillStyle=UP;c.fillRect(0,H-34,W,2);
+    c.fillStyle=UP;c.fillRect(20,H-22,10,10);text(c,'SEOUL ONCHAIN TRADING CHAMPIONSHIP',40,H-16,14,INK,'left',800);
+    text(c,'TITLE SPONSOR',W-250,H-16,12,DIM,'right',700);
+    c.strokeStyle='#ffffff55';c.lineWidth=1;c.setLineDash([4,3]);for(let i=0;i<3;i++)c.strokeRect(W-236+i*74,H-26,64,18);c.setLineDash([]);
+  }
+  // A registered profile picture: a block figure in square glasses on the trader's own colour.
+  function pfp(c,x,y,size,i,ring){
+    const u=size/8, gy=y+3*u;
+    if(ring){c.save();c.shadowColor=HUES[i%8];c.shadowBlur=size*.22;c.fillStyle=HUES[i%8];box(c,x,y,size,size,size*.22);c.fill();c.restore();}
+    c.save();box(c,x,y,size,size,size*.22);c.clip();
+    const g=c.createLinearGradient(x,y,x,y+size);g.addColorStop(0,HUES[i%8]);g.addColorStop(1,HUES[(i+3)%8]);c.fillStyle=g;c.fillRect(x,y,size,size);
+    c.fillStyle='#1b1e42';c.fillRect(x+u,y+6.2*u,6*u,1.8*u);                    // shoulders
+    c.fillStyle=TONES[i%8];c.fillRect(x+2*u,y+1.6*u,4*u,4.6*u);                 // head
+    c.fillStyle=i%2?'#e8502a':'#1b1e42';                                        // glasses frame
+    c.fillRect(x+1.2*u,gy,2.6*u,1.8*u);c.fillRect(x+4.4*u,gy,2.6*u,1.8*u);c.fillRect(x+3.8*u,gy+.5*u,.6*u,.5*u);c.fillRect(x+.5*u,gy+.5*u,.7*u,.5*u);
+    c.fillStyle='#ffffff';c.fillRect(x+1.6*u,gy+.4*u,.9*u,u);c.fillRect(x+4.8*u,gy+.4*u,.9*u,u);
+    c.fillStyle='#111111';c.fillRect(x+2.5*u,gy+.4*u,.9*u,u);c.fillRect(x+5.7*u,gy+.4*u,.9*u,u);
+    c.restore();
+    c.lineWidth=Math.max(1.5,size*.035);c.strokeStyle='#ffffff';box(c,x,y,size,size,size*.22);c.stroke();
+  }
+  const chip=(c,x,y,w,h,rank)=>{c.fillStyle=MEDAL[rank-1]||'#ffffff2e';box(c,x,y,w,h,h*.28);c.fill();text(c,String(rank),x+w/2,y+h/2+1,h*.62,rank<4?NIGHT:INK,'center',800);};
+  // A webcam tile: the trader as the camera on their monitor sees them, with rank, name and return.
+  function cam(c,x,y,w,h,i){
+    const cx=x+w/2, r=h*.19, cy=y+h*.4, ph=Math.max(30,h*.19), [name,v]=TRADERS[i], pad=ph*.32;
+    c.save();box(c,x,y,w,h,10);c.clip();
+    const g=c.createLinearGradient(x,y,x,y+h);g.addColorStop(0,'#343a7a');g.addColorStop(1,'#151739');c.fillStyle=g;c.fillRect(x,y,w,h);
+    c.fillStyle='#ffffff12';c.fillRect(x+w*.07,y+h*.1,w*.26,h*.3);              // light from a window behind
+    c.fillStyle=HUES[i%8];c.beginPath();c.ellipse(cx,y+h*1.0,w*.3,h*.36,0,0,Math.PI*2);c.fill();   // shoulders
+    c.fillStyle=TONES[i%8];c.fillRect(cx-r*.36,cy+r*.6,r*.72,r*.8);             // neck
+    dot(c,cx,cy,r,TONES[i%8]);                                                  // head
+    c.fillStyle='#22180f';c.beginPath();c.arc(cx,cy-r*.1,r*1.03,Math.PI*1.04,Math.PI*1.96);c.closePath();c.fill();   // hair
+    dot(c,cx-r*.38,cy+r*.08,r*.09,'#16182e');dot(c,cx+r*.38,cy+r*.08,r*.09,'#16182e');                              // eyes
+    c.strokeStyle='#16182e';c.lineWidth=Math.max(1.5,r*.07);c.beginPath();c.arc(cx,cy+r*.3,r*.3,Math.PI*.18,Math.PI*.82);c.stroke();   // mouth
+    c.strokeStyle='#0c0d1c';c.lineWidth=r*.2;c.beginPath();c.arc(cx,cy,r*1.15,Math.PI*1.12,Math.PI*1.88);c.stroke();   // headset band
+    c.fillStyle='#0c0d1c';c.fillRect(cx-r*1.32,cy-r*.3,r*.34,r*.72);c.fillRect(cx+r*.98,cy-r*.3,r*.34,r*.72);          // ear cups
+    c.fillStyle='#080a1ee0';c.fillRect(x,y+h-ph,w,ph);c.fillStyle=HUES[i%8];c.fillRect(x,y+h-ph,w,3);
+    text(c,name,x+pad,y+h-ph/2+1,fit(c,name,w*.43,ph*.52,800),INK,'left',800);
+    text(c,pct(v),x+w-pad,y+h-ph/2+1,fit(c,pct(v),w*.31,ph*.52,800),v<0?DOWN:UP,'right',800);
+    dot(c,x+16,y+17,5,DOWN);text(c,'CAM',x+27,y+18,12,INK,'left',800);
+    chip(c,x+w-ph*.95-8,y+8,ph*.95,ph*.8,i+1);
+    c.restore();
+    c.lineWidth=2;c.strokeStyle=i<2?UP:'#ffffff30';box(c,x,y,w,h,10);c.stroke();
+  }
+  // A small line of recent returns under a name.
+  function spark(c,x,y,w,h,points,color){
+    const lo=Math.min(...points), hi=Math.max(...points);
+    c.strokeStyle=color;c.lineWidth=3;c.lineJoin='round';c.beginPath();
+    points.forEach((p,i)=>{const px=x+i*w/(points.length-1), py=y+h-(p-lo)/(hi-lo)*h;i?c.lineTo(px,py):c.moveTo(px,py);});c.stroke();
+    dot(c,x+w,y+h-(points[points.length-1]-lo)/(hi-lo)*h,5,color);
+  }
   return [
     // 1 Title card
     (c,W,H)=>{
       ground(c,W,H);
-      c.fillStyle=UP;c.fillRect(0,0,W,8);c.fillRect(0,H-8,W,8);
-      text(c,'Minted Labs × Nouns DAO',W/2,44,20,DIM,'center',600);
-      const lines=['SEOUL ONCHAIN','TRADING','CHAMPIONSHIP'], size=Math.min(...lines.map(s=>fit(c,s,W*.86,66,800,'italic')));
-      lines.forEach((s,i)=>text(c,s,W/2,104+i*62,size,INK,'center',800,'italic'));
-      text(c,'2026.12.19–20 · SJ KUNSTHALLE',W/2,H-36,20,UP,'center',700);
+      c.save();c.globalAlpha=.12;c.fillStyle=UP;
+      for(let i=0;i<5;i++){const x=W-30-i*52;c.beginPath();c.moveTo(x,0);c.lineTo(x+28,0);c.lineTo(x-190,H);c.lineTo(x-218,H);c.fill();}
+      c.restore();
+      c.fillStyle=UP;c.fillRect(0,0,W,10);c.fillRect(0,H-10,W,10);
+      c.strokeStyle='#ffffff66';c.lineWidth=3;   // corner marks
+      for(const [x,y,dx,dy] of [[28,30,1,1],[W-28,30,-1,1],[28,H-30,1,-1],[W-28,H-30,-1,-1]]){c.beginPath();c.moveTo(x+dx*34,y);c.lineTo(x,y);c.lineTo(x,y+dy*34);c.stroke();}
+      text(c,'Minted Labs × Nouns DAO',W/2,58,26,DIM,'center',700);
+      const lines=['SEOUL ONCHAIN','TRADING','CHAMPIONSHIP'], size=Math.min(...lines.map(s=>fit(c,s,W*.82,108,800,'italic')));
+      c.save();c.shadowColor='#3ddc84aa';c.shadowBlur=34;lines.forEach((s,i)=>text(c,s,W/2,150+i*100,size,INK,'center',800,'italic'));c.restore();
+      c.fillStyle=UP;box(c,W/2-270,420,540,48,24);c.fill();text(c,'2026.12.19–20 · SJ KUNSTHALLE · SEOUL',W/2,445,23,NIGHT,'center',800);
     },
-    // 2 Live ranking of the four traders on stage
+    // 2 Live ranking of the eight traders on stage, each with a profile picture
     (c,W,H)=>{
-      ground(c,W,H);head(c,W,'조별 예선 A조 · 실시간 순위','12:34');
-      c.fillStyle=DOWN;c.fillRect(W-150,18,54,24);text(c,'LIVE',W-123,30,14,INK,'center',800);
-      [['TRADER 3',12.4],['TRADER 1',7.8],['TRADER 4',1.9],['TRADER 2',-3.2]].forEach(([name,v],i)=>{
-        const y=92+i*56, w=Math.abs(v)/12.4*250;
-        text(c,String(i+1),38,y,30,i<2?UP:DIM,'center',800);
-        text(c,name,70,y,24,INK);
-        c.fillStyle='#ffffff18';c.fillRect(230,y-14,250,28);
-        c.fillStyle=v<0?DOWN:UP;c.fillRect(230,y-14,w,28);
-        text(c,(v<0?'−':'+')+Math.abs(v).toFixed(1)+'%',W-24,y,26,v<0?DOWN:UP,'right',800);
+      frame(c,W,H,'실시간 순위 · 조별 예선 A조','12:34',INK,true);
+      const top=66, rh=50, max=18.6;
+      TRADERS.forEach(([name,v,move],i)=>{
+        const y=top+i*rh, mid=y+rh/2, w=Math.max(20,Math.abs(v)/max*392);
+        c.fillStyle=i<2?'#3ddc8424':i%2?'#ffffff0a':'#ffffff05';box(c,14,y+3,W-28,rh-6,10);c.fill();
+        if(i<2){c.fillStyle=UP;box(c,14,y+3,6,rh-6,3);c.fill();}
+        chip(c,32,mid-17,38,34,i+1);
+        pfp(c,84,mid-19,38,i);
+        text(c,name,136,mid+1,25,INK,'left',800);
+        text(c,move>0?'▲':move<0?'▼':'–',322,mid+1,17,move>0?UP:move<0?DOWN:DIM,'center',800);
+        c.fillStyle='#ffffff14';box(c,352,mid-10,392,20,10);c.fill();
+        c.fillStyle=v<0?shade(c,352,352+w,'#c93a4b',DOWN):shade(c,352,352+w,'#1fae63','#6dffb0');box(c,352,mid-10,w,20,10);c.fill();
+        text(c,pct(v),W-30,mid+1,28,v<0?DOWN:UP,'right',800);
       });
+      const cut=top+2*rh;   // the top two go through
+      c.strokeStyle=GOLD;c.lineWidth=2;c.setLineDash([10,7]);c.beginPath();c.moveTo(14,cut);c.lineTo(W-14,cut);c.stroke();c.setLineDash([]);
+      c.fillStyle=NIGHT;box(c,750,cut-13,136,26,13);c.fill();c.strokeStyle=GOLD;c.stroke();text(c,'▲ 상위 2명 진출',818,cut+1,14,GOLD,'center',800);
     },
-    // 3 One trader's screen: candles and the running return
+    // 3 The webcams on the desks: the leader large, the other seven beside it, and the top three in the last cell
     (c,W,H)=>{
-      ground(c,W,H);head(c,W,'TRADER 1 · BTC-USDT','+7.8%',UP);
-      c.strokeStyle='#ffffff1c';c.lineWidth=1;for(let i=1;i<4;i++){const y=58+i*(H-78)/4;c.beginPath();c.moveTo(20,y);c.lineTo(W-20,y);c.stroke();}
-      const moves=[6,-4,9,5,-7,11,-3,8,-10,4,12,-5,7,9,-6,13,-4,6,10,-8,9,11], n=moves.length, step=(W-56)/n;
-      let price=96;
-      moves.forEach((d,i)=>{
-        const open=price, close=price+d, hi=Math.max(open,close)+4, lo=Math.min(open,close)-4, x=30+i*step, Y=p=>H-22-(p-80)*1.55;
-        c.fillStyle=c.strokeStyle=d<0?DOWN:UP;c.lineWidth=2;
-        c.beginPath();c.moveTo(x+step*.33,Y(hi));c.lineTo(x+step*.33,Y(lo));c.stroke();
-        c.fillRect(x,Math.min(Y(open),Y(close)),step*.66,Math.max(3,Math.abs(Y(open)-Y(close))));
-        price=close;
-      });
+      frame(c,W,H,'선수 캠 · 데스크 웹캠','12:34',INK,true);
+      const y0=68, hh=H-34-10-y0, bw=392, gap=10, gx=20+bw+gap, tw=(W-20-gx-3*gap)/4, th=(hh-gap)/2;
+      cam(c,20,y0,bw,hh,0);
+      for(let k=1;k<8;k++){const col=(k-1)%4, row=Math.floor((k-1)/4);cam(c,gx+col*(tw+gap),y0+row*(th+gap),tw,th,k);}
+      const x=gx+3*(tw+gap), y=y0+th+gap;   // last cell: the top three
+      c.fillStyle='#ffffff12';box(c,x,y,tw,th,10);c.fill();text(c,'TOP 3',x+tw/2,y+24,16,GOLD,'center',800);
+      for(let k=0;k<3;k++){const ry=y+46+k*46;chip(c,x+10,ry,26,26,k+1);pfp(c,x+42,ry-3,32,k);text(c,pct(TRADERS[k][1]),x+tw-10,ry+14,fit(c,pct(TRADERS[k][1]),tw-90,19,800),UP,'right',800);}
     },
-    // 4 Session vote: who finishes first in this heat
+    // 4 Comparison of the two traders fighting for the last place that goes through, with their profile pictures
     (c,W,H)=>{
-      ground(c,W,H);head(c,W,'세션 투표 · 누가 1위일까?','마감 01:20',UP);
-      [['T1',38],['T2',27],['T3',21],['T4',14]].forEach(([name,v],i)=>{
-        const x=40+i*104, h=v/38*150, y0=H-52;
-        c.fillStyle='#ffffff18';c.fillRect(x,y0-150,70,150);
-        c.fillStyle=i?'#8d93ff':UP;c.fillRect(x,y0-h,70,h);
-        text(c,v+'%',x+35,y0-h-18,24,INK,'center',800);
-        text(c,name,x+35,H-28,22,DIM,'center',700);
+      frame(c,W,H,'순위 경쟁 · 2위 진출권','05:12 남음',GOLD);
+      c.save();c.globalAlpha=.2;   // each side in its trader's colour, split on a slant
+      c.fillStyle=HUES[1];c.beginPath();c.moveTo(0,58);c.lineTo(W/2+40,58);c.lineTo(W/2-40,H-34);c.lineTo(0,H-34);c.fill();
+      c.fillStyle=HUES[2];c.beginPath();c.moveTo(W/2+40,58);c.lineTo(W,58);c.lineTo(W,H-34);c.lineTo(W/2-40,H-34);c.fill();
+      c.restore();
+      const lines=[[[4,5,5,7,8,8,9,9.5,11,11.6,12,12.4],'최근 1분 +0.4%',DIM],[[1,1.5,3,2.6,4,5.2,5,6.4,7,7.8,8.6,9.1],'추격 중 ▲ 최근 1분 +2.6%',UP]];
+      [[1,W*.23],[2,W*.77]].forEach(([i,cx],k)=>{
+        const [name,v]=TRADERS[i];
+        pfp(c,cx-72,76,144,i,true);chip(c,cx-98,68,54,42,i+1);
+        text(c,name,cx,252,36,INK,'center',800);text(c,pct(v),cx,304,56,UP,'center',800);
+        spark(c,cx-150,344,300,50,lines[k][0],HUES[i]);
+        text(c,lines[k][1],cx,426,19,lines[k][2],'center',800);
       });
-      const q=130, qx=W-q-34, qy=96;   // QR placeholder
-      c.fillStyle=INK;c.fillRect(qx,qy,q,q);c.fillStyle='#12142e';
-      for(let a=0;a<7;a++)for(let b=0;b<7;b++)if((a*5+b*3+a*b)%3===0||((a<2||a>4)&&(b<2||b>4)&&!(a>4&&b>4)))c.fillRect(qx+10+a*16,qy+10+b*16,14,14);
-      text(c,'플레이 카드로 투표',qx+q/2,qy+q+26,18,DIM,'center',700);
+      dot(c,W/2,150,58,NIGHT);c.strokeStyle=GOLD;c.lineWidth=4;c.beginPath();c.arc(W/2,150,58,0,Math.PI*2);c.stroke();
+      text(c,'VS',W/2-3,153,52,INK,'center',800,'italic');
+      c.fillStyle=NIGHT;box(c,W/2-96,236,192,46,23);c.fill();c.strokeStyle=GOLD;c.lineWidth=2;c.stroke();text(c,'격차 3.3%p',W/2,260,24,GOLD,'center',800);
+    },
+    // 5 Session vote: who finishes first in this heat
+    (c,W,H)=>{
+      frame(c,W,H,'세션 투표 · 누가 1위일까?','마감 01:20',UP);
+      const votes=[24,18,15,13,11,8,6,5], y0=388, tall=250;
+      votes.forEach((v,i)=>{
+        const x=36+i*94, h=v/votes[0]*tall, g=c.createLinearGradient(0,y0-h,0,y0);
+        g.addColorStop(0,i?'#b3b7ff':'#6dffb0');g.addColorStop(1,i?'#5a5fd6':'#1fae63');
+        c.fillStyle='#ffffff10';box(c,x,y0-tall,64,tall,8);c.fill();
+        c.fillStyle=g;box(c,x,y0-h,64,h,8);c.fill();
+        text(c,v+'%',x+32,y0-h-20,i?22:28,i?INK:UP,'center',800);
+        pfp(c,x+11,y0+8,42,i);text(c,TRADERS[i][0],x+32,y0+64,13,DIM,'center',700);
+      });
+      const q=150, qx=W-q-44, qy=92;   // QR placeholder
+      c.fillStyle=INK;box(c,qx,qy,q,q,10);c.fill();c.fillStyle=NIGHT;
+      for(let a=0;a<7;a++)for(let b=0;b<7;b++)if((a*5+b*3+a*b)%3===0||((a<2||a>4)&&(b<2||b>4)&&!(a>4&&b>4)))c.fillRect(qx+12+a*18,qy+12+b*18,16,16);
+      text(c,'플레이 카드로 투표',qx+q/2,qy+q+30,21,INK,'center',800);text(c,'참여 312명',qx+q/2,qy+q+64,24,GOLD,'center',800);
+      text(c,'한 사람 한 표',qx+q/2,qy+q+96,17,DIM,'center',700);
     }
   ];
 })();
@@ -483,7 +589,7 @@ function buildInterior(m,floor=1) {
     r.box(23.96,.47,3.66,24.0,5.23,13.41,'#14163a',dark,'stage');   // lit screen face
     // The picture on show, read from the hall: north end on the left, south end on the right.
     const k=SCREEN_MODE%SCREENS.length;
-    r.picture([[23.955,5.23,3.66],[23.955,5.23,13.41],[23.955,.47,13.41],[23.955,.47,3.66]],'screen'+k,640,312,SCREENS[k],'stage');
+    r.picture([[23.955,5.23,3.66],[23.955,5.23,13.41],[23.955,.47,13.41],[23.955,.47,3.66]],'screen'+k,SCREEN_SIZE[0],SCREEN_SIZE[1],SCREENS[k],'stage');
   }
   // Indoor banner positions from the venue's signage guide.
   function hallBanners(wide,tall){
@@ -562,11 +668,19 @@ function buildInterior(m,floor=1) {
     for(let x=x0+.35,i=0;x+1<x1;x+=1.3,i++)r.box(x,1.1,4.52,x+.9,1.2,4.84,[amber,sage,'#8b8b8b'][i%3],steel,'buffet');
   }
   r.sign(7.4,.3,4.86,3.6,.45,[korean ? '바 / 케이터링' : 'BAR / CATERING'],'buffet');
-  for(const [x,s] of [[3.4,6.6],[5.6,7.5],[7.8,6.4],[4.2,9.7],[6.6,10.4],[8.4,8.9]]){   // standing tables in the lounge
-    r.box(x-.3,1.05,s-.3,x+.3,1.1,s+.3,pale,steel,'buffet');
-    r.box(x-.04,.03,s-.04,x+.04,1.05,s+.04,steel,'none','buffet');
-    r.box(x-.2,0,s-.2,x+.2,.03,s+.2,steel,'none','buffet');
+  for(const [x,s,g] of [[2.7,7.6,'lounge'],[4.3,8.0,'lounge'],[5.9,7.5,'lounge'],[7.9,6.5,'buffet'],[4.2,10.2,'buffet'],[6.7,10.5,'buffet'],[8.5,9.0,'buffet']]){   // standing tables: three in the lounge, four around it
+    r.box(x-.3,1.05,s-.3,x+.3,1.1,s+.3,pale,steel,g);
+    r.box(x-.04,.03,s-.04,x+.04,1.05,s+.04,steel,'none',g);
+    r.box(x-.2,0,s-.2,x+.2,.03,s+.2,steel,'none',g);
   }
+  // Lounge in front of the bar, about 30% smaller than the one in the received plan (5.25 x 2.95 m against 7.5 x 4.2 m):
+  // a carpet marks the area, two benches back onto the bar aisle, and a small desk carries the sign.
+  r.box(1.6,0,6.0,6.85,.012,8.95,'#b9b9b9','none','lounge');
+  for(const x0 of [2.0,4.25]){
+    r.box(x0,0,6.2,x0+1.8,.42,6.75,sage,steel,'lounge');r.box(x0,0,6.1,x0+1.8,.82,6.2,teal,steel,'lounge');
+  }
+  r.box(1.75,0,8.35,2.85,1.0,8.8,pale,steel,'lounge');
+  r.sign(1.8,.25,8.81,1.0,.5,[korean ? '라운지' : 'LOUNGE'],'lounge');
   if(STAGE_VARIANT!=='line')thrustStage(STAGE_VARIANT==='draftA',STAGE_VARIANT==='draftB');
   else{
   // Stage in front of the LED screen.
@@ -633,6 +747,7 @@ function buildInterior(m,floor=1) {
         obox(c,a,f,.525,.325,H+.70,H+.74,pale,steel,'players',mirror);                 // desk top
         obox(off(c,0,.31),a,f,.525,.015,H,H+.70,'#9a9a9a',steel,'players',mirror);     // front panel facing the audience
         obox(off(c,-.27,.17),a,f,.22,.02,H+.86,H+1.14,dark,steel,'players',mirror);    // low monitor at the outer end
+        obox(off(c,-.27,.17),a,f,.05,.03,H+1.14,H+1.2,'#111111','none','players',mirror);   // webcam on the monitor
         obox(off(c,0,-.72),a,f,.21,.21,H,H+.45,'#b1b1b1',steel,'players',mirror);      // chair seat
         obox(off(c,0,-.93),a,f,.21,.025,H+.45,H+.86,dark,'none','players',mirror);     // chair back
       });
@@ -643,6 +758,7 @@ function buildInterior(m,floor=1) {
         obox(at(t,.80),u,n,.525,.325,H+.70,H+.74,pale,steel,'players',mirror);    // desk top, along the edge
         obox(at(t,.49),u,n,.525,.015,H,H+.70,'#9a9a9a',steel,'players',mirror);   // front panel facing the audience
         obox(at(t-.27,.66),u,n,.22,.02,H+.86,H+1.14,dark,steel,'players',mirror); // low monitor at one end, so the face stays visible
+        obox(at(t-.27,.66),u,n,.05,.03,H+1.14,H+1.2,'#111111','none','players',mirror);   // webcam on the monitor
         obox(at(t,1.5),u,n,.21,.21,H,H+.45,'#b1b1b1',steel,'players',mirror);     // chair seat
         obox(at(t,1.71),u,n,.21,.025,H+.45,H+.86,dark,'none','players',mirror);   // chair back, toward the centre lane
         continue;
@@ -656,9 +772,13 @@ function buildInterior(m,floor=1) {
     obox([T.xFront+.75,MID],[0,1],[1,0],.18,.14,H,H+1.7,'#4a4a4a','none','stage',false);   // host
   }
   for(let i=0;i<7;i++)for(const block of [3.8,9.3])for(let j=0;j<8;j++)chair(12.6+i*.9,0,block+j*.5+.04,'-x','seats');   // 8 x 7 x 2 = 112
-  // Check-in at the bay next to the entrance; partner booths 1-3 in the other three bays.
-  r.box(7.5,0,13.7,9.55,1.05,14.25,sage,steel,'gate');
-  r.sign(7.7,.3,14.26,1.65,.44,[korean ? '등록' : 'CHECK-IN'],'gate');
+  // Reception straight ahead from the door: tickets, wristbands and the Play Card check-in. Its sign faces the door.
+  // The bay beside the door is its store; partner booths 1-3 are in the other three bays.
+  r.box(9.0,0,12.3,11.2,1.05,12.9,pale,steel,'gate');
+  r.box(8.95,1.05,12.25,11.25,1.1,12.95,timber,steel,'gate');
+  r.sign(9.15,.3,12.91,1.9,.5,[korean ? '리셉션 · 티켓' : 'RECEPTION'],'gate');
+  r.box(7.6,0,16.3,9.5,1.6,16.85,pale,steel,'gate');
+  for(const h of [.55,1.1])r.line([7.6,h,16.3],[9.5,h,16.3],steel,.8,'gate');
   for(let i=0;i<3;i++){
     const x=i*CW;
     r.box(x+.12,0,14.1,x+2.4,.02,D-.12,sage,'none','booth');
@@ -667,7 +787,7 @@ function buildInterior(m,floor=1) {
   }
   // Screen pin near the top of the screen, stage pin over the north bank of desks, so neither touches another pin.
   return {stage:r.at(23.95,4.7,8.5),players:STAGE_VARIANT!=='line'?r.at(21.7,THRUST.h+1.3,5.6):r.at(21.5,SH+1.05,5.7),seats:r.at(15.5,.9,8.55),
-    booth:r.at(3.66,1.1,14.75),gate:r.at(8.5,1.15,13.98),door:r.at(10.975,-.15,D+1.15),buffet:r.at(4.6,1.25,4.68),shared:r.at(.03,1.3,7.9),facility:r.at(11.95,1.96,N1),
+    booth:r.at(3.66,1.1,14.75),gate:r.at(10.1,1.2,12.6),lounge:r.at(5.6,.9,8.5),door:r.at(10.975,-.15,D+1.15),buffet:r.at(4.6,1.25,4.68),shared:r.at(.03,1.3,7.9),facility:r.at(11.95,1.96,N1),
     hangwide:r.at(XM+SIGNS.hallWide[0],F[1]+.25+SIGNS.hallWide[1],N1),hangtall:r.at((XE0+XE1)/2,.15+SIGNS.hallTall[1],SS)};
   }
 

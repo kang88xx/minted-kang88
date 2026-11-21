@@ -5,10 +5,10 @@ const views = [
   {id:'outside', title:t('Exterior view','외관 입체도'), areaTitle:t('Exterior zones','외관 구역'), angle:-32, elevation:15,
    zones:['banner','topbanner','signage','entrance']},
   {id:'inside', title:t('Interior cutaway','내부 절개 투시도'), areaTitle:t('Interior zones','내부 구역'), angle:-32, elevation:35,
-   zones:['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','vip','cast','control','rooms','interview','gallery','facility']}
+   zones:['stage','players','seats','booth','gate','door','buffet','lounge','hangwide','hangtall','vip','cast','control','rooms','interview','gallery','facility']}
 ];
 // Floors each interior zone is drawn on. Zones not listed here appear on every floor.
-const zoneFloors = {stage:[1], players:[1], seats:[1], gate:[1], door:[1], buffet:[1], hangtall:[1], booth:[1,2], hangwide:[1,2],
+const zoneFloors = {stage:[1], players:[1], seats:[1], gate:[1], door:[1], buffet:[1], lounge:[1], hangtall:[1], booth:[1,2], hangwide:[1,2],
   vip:[2], cast:[2], control:[2], rooms:[3], interview:[3], gallery:[3]};
 // Sizes of banner, sign and LED positions, shown with the zone name on the drawing.
 const specs = {banner:'11,820 × 5,680 mm', topbanner:'9,700 × 2,800 mm', signage:'약 2,070 × 2,300 mm × 12면', glass:'LED 아님 · 일반 유리 1면', entrance:'사인 2,400 × 520 mm',
@@ -38,7 +38,8 @@ const actions = {
   hangwide:{label:'현수막 시안 보기', open:'hangwide-layout'},
   hangtall:{label:'현수막 시안 보기', open:'hangtall-layout'},
   signage:{label:'LED 송출 시안 보기', open:'led-layout'},
-  players:{label:'무대 시안 보기', open:'stage-drafts'}
+  players:{label:'무대 시안 보기', open:'stage-drafts'},
+  stage:{label:'스크린 시안 보기', open:'screen-layout'}
 };
 function actionButton(id, cls){
   const a=actions[id]; if(!a)return null;
@@ -64,21 +65,23 @@ const zones = {
   glass:['출입문 위 유리창','2층 · 출입문 사인 위',
     '왼쪽 LED 창 12개의 바로 오른쪽, 출입문 사인 위 2층에 있는 창입니다. 낮에는 LED 창과 비슷한 유리창으로 보이지만, 대관처 부착물 안내서의 야간 행사 사진(4쪽)에서는 왼쪽 12개에만 화면이 나오고 이 창은 꺼진 채 유리 너머 실내가 보입니다. 그래서 외부 컬러 LED 12면에 넣지 않고 일반 유리창으로 따로 표시했습니다. 이 창에 행사 이미지를 넣으려면 시트지나 출력물을 붙여야 하며, 부착 가능 여부와 방법은 대관처와 확인합니다.'],
   entrance:['관객 출입구','안내 3명',
-    'LED 창 오른쪽 쌍문으로 들어서면 유리 전실을 지나 홀 안쪽 등록대로 이어집니다. 문 위 사인은 교체할 수 있고 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 등록대와 같은 안내 스태프 3명이 티켓을 확인하고 입장 팔찌를 채웁니다. 대관 시 무료 주차는 3대입니다. 차량 통제는 협의 중입니다.'],
+    'LED 창 오른쪽 쌍문으로 들어서면 유리 전실을 지나 정면의 리셉션으로 이어집니다. 문 위 사인은 교체할 수 있고 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 리셉션과 같은 안내 스태프 3명이 티켓을 확인하고 입장 팔찌를 채웁니다. 대관 시 무료 주차는 3대입니다. 차량 통제는 협의 중입니다.'],
   stage:[t('Main LED screen','메인 LED 스크린'),t('East wall · 10 × 5 m','동쪽 벽 고정 · 10 × 5 m'),
-    t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 방송·조명 컨트롤이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 도면의 스크린은 타이틀, 실시간 순위, 선수 차트, 세션 투표 네 화면이 차례로 바뀌는 시안입니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
+    t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 방송·조명 컨트롤이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 도면의 스크린은 타이틀, 8명 실시간 순위, 선수 캠, 순위 경쟁 비교, 세션 투표 다섯 화면이 차례로 바뀌는 시안입니다. 순위표와 비교 화면에는 선수가 등록한 프로필 사진을 쓰고, 등록하지 않은 선수는 무대 PC 캠으로 찍은 사진을 씁니다. 크게 보려면 아래 버튼을 누릅니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
   players:[t('Main stage & competitor desks','메인 무대 · 선수 데스크'),t('Stage 10.70 × 3.90 m','무대 10.70 × 3.90 m · 선수 8석 · MC 1명'),
-    t('Main stage and desks.','LED 스크린 앞에, 객석 쪽으로 꼭짓점이 튀어나온 오각형 무대를 둡니다(시안 A). 폭 10.70 m, 깊이 3.90 m, 높이 0.6 m이고, 위 모서리를 따라 흰 LED 띠를 두르고 비스듬한 두 면 스커트에 출력물을 붙입니다. 선수 데스크 8개는 사선 모서리를 따라 한쪽에 4석씩 놓습니다. 본선은 한 경기에 4명이 뛰어 한쪽에 2석씩 쓰고, 8석 전체는 20일 쇼매치(결승 진출자 4명 + 크리에이터 4명 제안)에 씁니다. 선수는 가운데 통로를 등지고 바깥쪽 객석을 봐서, 같은 쪽 객석에서는 얼굴 정면, 반대쪽에서는 옆얼굴이 보입니다. 모니터는 얼굴을 가리지 않게 데스크 바깥쪽 끝에 낮게 둡니다. MC는 앞 꼭짓점에 서고, 계단은 앞 꼭짓점과 북쪽 크루용 두 곳입니다. 심판·경기 진행 인력 2명과 예비 PC 2세트를 둡니다. 무대 위를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 각진 모양이라 대관처 기본 무대(6 × 2 m)로는 만들 수 없어 제작 무대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 시안 B(뒷줄은 객석, 앞줄은 스크린을 봄)는 아래 버튼에서 비교할 수 있습니다.')],
+    t('Main stage and desks.','LED 스크린 앞에, 객석 쪽으로 꼭짓점이 튀어나온 오각형 무대를 둡니다(시안 A). 폭 10.70 m, 깊이 3.90 m, 높이 0.6 m이고, 위 모서리를 따라 흰 LED 띠를 두르고 비스듬한 두 면 스커트에 출력물을 붙입니다. 선수 데스크 8개는 사선 모서리를 따라 한쪽에 4석씩 놓습니다. 본선은 한 경기에 4명이 뛰어 한쪽에 2석씩 쓰고, 8석 전체는 20일 쇼매치(결승 진출자 4명 + 크리에이터 4명 제안)에 씁니다. 크리에이터는 20일에만 참석합니다. 선수는 가운데 통로를 등지고 바깥쪽 객석을 봐서, 같은 쪽 객석에서는 얼굴 정면, 반대쪽에서는 옆얼굴이 보입니다. 모니터는 얼굴을 가리지 않게 데스크 바깥쪽 끝에 낮게 둡니다. 모니터마다 웹캠을 달아 선수 얼굴을 메인 스크린에 띄웁니다. MC는 앞 꼭짓점에 서고, 계단은 앞 꼭짓점과 북쪽 크루용 두 곳입니다. 심판·경기 진행 인력 2명과 예비 PC 2세트를 둡니다. 무대 위를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 각진 모양이라 대관처 기본 무대(6 × 2 m)로는 만들 수 없어 제작 무대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 시안 B(뒷줄은 객석, 앞줄은 스크린을 봄)는 아래 버튼에서 비교할 수 있습니다.')],
   seats:[t('Audience seating','관객석'),t('112 seats · 2 blocks of 8 × 7','관람 112석 · 8석 × 7열 2블록'),
     t('Two blocks of seven rows by eight chairs face the stage, with a centre aisle between them. The rear rows sit under the open atrium. The plan is for 500 guests, so most stand: in the lounge behind the seating and at the 2nd-floor railings. About 100 of the chairs can be the venue\'s free house chairs. Confirm aisles, accessible seating, exits and equipment clearances before fixing capacity.','무대를 향해 8석 × 7열 두 블록, 의자 112석을 배치한 제안입니다. 두 블록 사이에 가운데 통로를 두었고 뒤쪽 열은 아트리움 아래에 놓입니다. 계획 인원이 500명이라 대부분은 서서 봅니다. 객석 뒤 라운지와 2층 난간을 씁니다. 의자는 대관처 보유분 114개(접이식 50개 포함)를 먼저 쓰고 모자라는 만큼만 빌립니다. 통로, 휠체어석, 출입구와 장비 간격을 반영한 정원은 대관처와 확인합니다.')],
   booth:[t('Partner booths','파트너 부스'),t('7 booths · 3 shared crew','부스 7곳 · 공용 인력 3명'),
-    t('Booths 1–3 use three of the four street-side bays on the ground floor; booths 4–7 use the north gallery room on the 2nd floor.','부스 1–3은 1층 가로 쪽 전시 칸 네 곳 중 등록대 옆 세 곳(칸마다 약 2.3 × 2.8 m)에, 부스 4–7은 2층 북쪽 전시실에 둡니다. 2층은 북쪽 벽을 따라 3곳(각 약 1.9 × 1.8 m), 계단 앞에 1곳(약 2.2 × 1.8 m)이고, 동쪽 끝은 계단 입구와 여자 화장실 문으로 가는 통로라 비워 둡니다. 부스마다 대관처 행사 테이블(1,500 × 700 mm) 1개와 배너 2개를 놓습니다. 공용 운영 2명, 로비 경호 1명, 각 부스 후원사 담당자 1명을 가정합니다. 부스 배치는 대관처와 협의합니다.')],
+    t('Booths 1–3 use three of the four street-side bays on the ground floor; booths 4–7 use the north gallery room on the 2nd floor.','부스 1–3은 1층 가로 쪽 전시 칸 네 곳 중 서쪽 세 곳(칸마다 약 2.3 × 2.8 m)에, 부스 4–7은 2층 북쪽 전시실에 둡니다. 2층은 북쪽 벽을 따라 3곳(각 약 1.9 × 1.8 m), 계단 앞에 1곳(약 2.2 × 1.8 m)이고, 동쪽 끝은 계단 입구와 여자 화장실 문으로 가는 통로라 비워 둡니다. 부스마다 대관처 행사 테이블(1,500 × 700 mm) 1개와 배너 2개를 놓습니다. 공용 운영 2명, 로비 경호 1명, 각 부스 후원사 담당자 1명을 가정합니다. 부스 배치는 대관처와 협의합니다.')],
   door:['관객 출입구','정문 쌍문 · 언주로148길 쪽',
-    '관객은 건물 정면의 쌍문으로 들어와 유리 전실을 지나 바로 옆 등록대(05번)에서 티켓을 확인하고 입장 팔찌를 받습니다. 문 위 사인은 교체할 수 있으며 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 장비 반입은 서쪽 개러지 도어를 쓰고, 북쪽 개러지 도어는 비상 동선으로 비워 둡니다.'],
-  gate:[t('Check-in','등록·입장'),t('3 hosts','안내 3명'),
-    t('The check-in desk stands at the street-side bay next to the entrance vestibule. The entrance team checks tickets, fits entry wristbands and hands out prize-draw tickets and guest packs there. Wristbands and draw tickets are ordered for 600 per day, 500 guests plus a reserve of 100, with a different wristband colour each day. These are the same staff shown at the exterior entrance.','출입구 전실 바로 옆 전시 칸 앞에 등록대를 둡니다. 안내 스태프 3명이 이곳에서 티켓 확인, 입장 팔찌 착용, 추첨권·굿즈 배부를 맡습니다. 팔찌와 추첨권은 관객 500명에 예비 100명을 더해 날마다 600개씩 준비하고, 팔찌는 날짜별로 색을 다르게 합니다. 외관에 표시된 관객 출입구와 같은 인력입니다.')],
+    '관객은 건물 정면의 쌍문으로 들어와 유리 전실을 지나 정면의 리셉션(05번)에서 티켓을 확인하고 입장 팔찌를 받습니다. 문 위 사인은 교체할 수 있으며 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 장비 반입은 서쪽 개러지 도어를 쓰고, 북쪽 개러지 도어는 비상 동선으로 비워 둡니다.'],
+  gate:['리셉션 · 티켓 확인','정문 정면 · 안내 3명',
+    '정문으로 들어서면 바로 정면에 리셉션 데스크(약 2.2 × 0.6 m)를 둡니다. 안내 스태프 3명이 이곳에서 티켓 확인, 입장 팔찌 착용, 플레이 카드 QR 체크인, 추첨권·굿즈 배부를 맡습니다. 안내판은 문 쪽을 향하고, 데스크와 전실 사이 약 1.7 m에 줄을 세웁니다. 줄이 길어지면 전실 밖으로 나가지 않게 서쪽 부스 앞으로 돌립니다. 출입구 옆 전시 칸은 팔찌와 굿즈를 두는 보관 자리로 씁니다. 팔찌와 추첨권은 관객 500명에 예비 100명을 더해 날마다 600개씩 준비하고, 팔찌는 날짜별로 색을 다르게 합니다. 외관에 표시된 관객 출입구와 같은 인력입니다.'],
+  lounge:['라운지','바 앞 · 약 5.3 × 3.0 m · 벤치 2개 · 스탠딩 테이블 3개',
+    '바 카운터 앞 서쪽에 라운지 구역을 둡니다. 약 5.3 × 3.0 m 크기로 바닥에 카펫을 깔아 구역을 나누고, 벤치 2개, 스탠딩 테이블 3개, 안내 데스크를 둡니다. 경기 사이에 쉬거나 음식을 먹으면서 무대와 스크린을 볼 수 있는 자리입니다. 받은 계획안의 라운지(약 7.5 × 4.2 m)보다 30%쯤 작게 잡아, 바 앞 통로 약 1.1 m와 서쪽 계단 앞을 비웠습니다. 카펫과 가구는 피스·나사 없이 놓는 방식으로 준비합니다.'],
   buffet:[t('Bar & catering','바·케이터링'),t('150 + 200 guests','케이터링 150 + 200인분'),
-    t('Catering is planned with Deho Catering at KRW 25,000 per person, not yet confirmed: 150 guests on 19 December and 200 on 20 December. If food runs short, pizza or fried chicken is ordered for delivery on the day. It is served from the venue\'s existing bar counters on the north side of the hall, in front of the kitchen. Guests eat standing at the lounge tables behind the seating. Keep the aisles and exits clear as guests collect food. Confirm catering access, hot holding, power and staffing with the venue and caterer.','드호 케이터링에 19일 150인분, 20일 200인분을 주문할 예정이며, 확정 전입니다. 모자라면 현장에서 피자나 치킨을 배달 주문합니다. 홀 북쪽 주방 앞의 기존 바 카운터를 배식대로 씁니다. 관객은 객석 뒤 라운지의 스탠딩 테이블에서 식사합니다. 음식 수령 후 통로와 출입문을 비웁니다. 음식 반입, 온장, 전력과 인력은 대관처·업체와 협의합니다.')],
+    t('Catering is planned with Deho Catering at KRW 25,000 per person, not yet confirmed: 150 guests on 19 December and 200 on 20 December. If food runs short, pizza or fried chicken is ordered for delivery on the day. It is served from the venue\'s existing bar counters on the north side of the hall, in front of the kitchen. Guests eat standing at the lounge tables behind the seating. Keep the aisles and exits clear as guests collect food. Confirm catering access, hot holding, power and staffing with the venue and caterer.','드호 케이터링에 19일 150인분, 20일 200인분을 주문할 예정이며, 확정 전입니다. 모자라면 현장에서 피자나 치킨을 배달 주문합니다. 홀 북쪽 주방 앞의 기존 바 카운터를 배식대로 씁니다. 관객은 바 앞 라운지와 그 둘레의 스탠딩 테이블에서 식사합니다. 음식 수령 후 통로와 출입문을 비웁니다. 음식 반입, 온장, 전력과 인력은 대관처·업체와 협의합니다.')],
   hangwide:['실내 가로 현수막','6,300 × 2,380 mm',
     '정문으로 들어서면 정면에 보이는 자리로, 북쪽 개러지 도어 위 2층 컨테이너 면입니다. 대관처 규격은 가로 6,300 × 세로 2,380 mm이며 사용 여부는 선택입니다. 입장객이 처음 보는 면이라 환영 문구와 행사명, 1·2등급 파트너 로고를 넣는 안입니다.'],
   hangtall:['실내 세로 현수막','2,430 × 5,540 mm',
@@ -286,4 +289,13 @@ document.addEventListener('click',e=>{
  }
  const layer=e.target.closest('dialog.layer');
  if(layer&&(e.target===layer||e.target.closest('[data-close]')))layer.close();
+});
+// Screen design pop-up: the main LED screen's pictures at full size.
+const SCREEN_NAMES=['① 타이틀','② 실시간 순위 · 8명 · 프로필 사진','③ 선수 캠 · 데스크 웹캠 8대','④ 순위 경쟁 비교 · 프로필 사진','⑤ 세션 투표'];
+const gallery=document.getElementById('screen-gallery');
+if(gallery)SCREENS.forEach((paint,i)=>{
+ const figure=element('figure'),canvas=element('canvas');
+ canvas.width=SCREEN_SIZE[0];canvas.height=SCREEN_SIZE[1];paint(canvas.getContext('2d'),canvas.width,canvas.height);
+ canvas.setAttribute('role','img');canvas.setAttribute('aria-label',SCREEN_NAMES[i]);
+ figure.append(element('figcaption','',SCREEN_NAMES[i]),canvas);gallery.append(figure);
 });

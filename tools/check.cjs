@@ -16,7 +16,7 @@ const base=process.argv[2];
     assert.equal(await pressed(),'1');
     // nothing is selected and no bubble or detail shows until a zone is picked
     assert.equal(await page.locator('.cost-tip:visible, .detail:visible, .area.sel, .pin.sel').count(),0);
-    assert.deepEqual(await pins(),['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','facility']);
+    assert.deepEqual(await pins(),['stage','players','seats','booth','gate','door','buffet','lounge','hangwide','hangtall','facility']);
     // a 2F-only zone picked from the list switches the drawing to 2F
     await side.locator('.area[data-id=cast]').click();
     assert.equal(await pressed(),'2'); assert.equal(await sel(),'cast');
@@ -93,6 +93,11 @@ const base=process.argv[2];
     for(const f of ['venue-signage.pdf','venue-furniture.pdf']){const r=await page.request.get(new URL(f,page.url()).href); assert.equal(r.status(),200); assert.equal(await page.locator('a[href="'+f+'"][target=_blank]').count(),1);}
     await page.keyboard.press('Escape'); assert.equal(await page.locator('#signs').evaluate(d=>d.open),false);
     await page.locator('.side[data-view=outside] .area[data-id=banner]').click(); assert.match(await page.locator('.side[data-view=outside] .detail').innerText(),/11,820 × 5,680 mm/); assert.match(await page.locator('.plate[data-view=outside] .cost-tip').innerText(),/11,820 × 5,680 mm/);
+    // the screen design pop-up shows every picture of the main LED screen
+    await side.locator('.area[data-id=stage]').click(); await side.locator('.detail [data-open=screen-layout]').click();
+    assert.equal(await page.locator('#screen-layout').evaluate(d=>d.open),true); assert.equal(await page.locator('#screen-layout canvas').count(),await page.evaluate(()=>SCREENS.length));
+    assert.ok(await page.locator('#screen-layout').evaluate(d=>d.scrollWidth<=d.clientWidth+1),'screen pop-up has no sideways overflow');
+    await page.keyboard.press('Escape');
     await page.locator('#menu summary').click(); await page.locator('#menu nav a[data-open=schedule]').click(); assert.equal(await page.locator('#schedule').evaluate(d=>d.open),true); await page.locator('#schedule [data-close]').click();
     console.log('OK',file,w+'x'+h);
     await page.context().close();
