@@ -276,3 +276,9 @@ header details {justify-self:start;}
  .ledger tfoot th,.ledger tfoot td{border:0;padding:0;}
  .ledger tfoot td{white-space:nowrap;}
 }
+/* Phones held sideways: a taller drawing and smaller pins, so numbers do not crowd */
+@media(max-height:550px) and (orientation:landscape){
+ .scene{height:clamp(170px,calc(100svh - 80px),340px);}
+ .pin{width:24px;height:24px;font-size:9px;}
+ .pin.icon svg{width:13px;height:13px;}
+}
