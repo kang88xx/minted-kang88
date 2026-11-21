@@ -297,7 +297,7 @@ const SCREENS=(()=>{
     dot(c,x+16,y+17,5,DOWN);text(c,'CAM',x+27,y+18,12,INK,'left',800);
     chip(c,x+w-ph*.95-8,y+8,ph*.95,ph*.8,i+1);
     c.restore();
-    c.lineWidth=2;c.strokeStyle=i<2?UP:'#ffffff30';box(c,x,y,w,h,10);c.stroke();
+    c.lineWidth=2;c.strokeStyle=i<1?UP:'#ffffff30';box(c,x,y,w,h,10);c.stroke();
   }
   // A small line of recent returns under a name.
   function spark(c,x,y,w,h,points,color){
@@ -323,12 +323,12 @@ const SCREENS=(()=>{
     },
     // 2 Live ranking of the eight traders on stage, each with a profile picture
     (c,W,H)=>{
-      frame(c,W,H,'실시간 순위 · 조별 예선 A조','12:34',INK,true);
+      frame(c,W,H,'실시간 순위 · 1회차 무대 결선','12:34',INK,true);
       const top=66, rh=50, max=18.6;
       TRADERS.forEach(([name,v,move],i)=>{
         const y=top+i*rh, mid=y+rh/2, w=Math.max(20,Math.abs(v)/max*392);
-        c.fillStyle=i<2?'#3ddc8424':i%2?'#ffffff0a':'#ffffff05';box(c,14,y+3,W-28,rh-6,10);c.fill();
-        if(i<2){c.fillStyle=UP;box(c,14,y+3,6,rh-6,3);c.fill();}
+        c.fillStyle=i<1?'#3ddc8424':i%2?'#ffffff0a':'#ffffff05';box(c,14,y+3,W-28,rh-6,10);c.fill();
+        if(i<1){c.fillStyle=UP;box(c,14,y+3,6,rh-6,3);c.fill();}
         chip(c,32,mid-17,38,34,i+1);
         pfp(c,84,mid-19,38,i);
         text(c,name,136,mid+1,25,INK,'left',800);
@@ -337,9 +337,9 @@ const SCREENS=(()=>{
         c.fillStyle=v<0?shade(c,352,352+w,'#c93a4b',DOWN):shade(c,352,352+w,'#1fae63','#6dffb0');box(c,352,mid-10,w,20,10);c.fill();
         text(c,pct(v),W-30,mid+1,28,v<0?DOWN:UP,'right',800);
       });
-      const cut=top+2*rh;   // the top two go through
+      const cut=top+rh;   // only first place goes on to the team match
       c.strokeStyle=GOLD;c.lineWidth=2;c.setLineDash([10,7]);c.beginPath();c.moveTo(14,cut);c.lineTo(W-14,cut);c.stroke();c.setLineDash([]);
-      c.fillStyle=NIGHT;box(c,750,cut-13,136,26,13);c.fill();c.strokeStyle=GOLD;c.stroke();text(c,'▲ 상위 2명 진출',818,cut+1,14,GOLD,'center',800);
+      c.fillStyle=NIGHT;box(c,750,cut-13,136,26,13);c.fill();c.strokeStyle=GOLD;c.stroke();text(c,'▲ 1위 20일 진출',818,cut+1,14,GOLD,'center',800);
     },
     // 3 The webcams on the desks: the leader large, the other seven beside it, and the top three in the last cell
     (c,W,H)=>{
@@ -353,13 +353,13 @@ const SCREENS=(()=>{
     },
     // 4 Comparison of the two traders fighting for the last place that goes through, with their profile pictures
     (c,W,H)=>{
-      frame(c,W,H,'순위 경쟁 · 2위 진출권','05:12 남음',GOLD);
+      frame(c,W,H,'순위 경쟁 · 1위 다툼','05:12 남음',GOLD);
       c.save();c.globalAlpha=.2;   // each side in its trader's colour, split on a slant
-      c.fillStyle=HUES[1];c.beginPath();c.moveTo(0,58);c.lineTo(W/2+40,58);c.lineTo(W/2-40,H-34);c.lineTo(0,H-34);c.fill();
-      c.fillStyle=HUES[2];c.beginPath();c.moveTo(W/2+40,58);c.lineTo(W,58);c.lineTo(W,H-34);c.lineTo(W/2-40,H-34);c.fill();
+      c.fillStyle=HUES[0];c.beginPath();c.moveTo(0,58);c.lineTo(W/2+40,58);c.lineTo(W/2-40,H-34);c.lineTo(0,H-34);c.fill();
+      c.fillStyle=HUES[1];c.beginPath();c.moveTo(W/2+40,58);c.lineTo(W,58);c.lineTo(W,H-34);c.lineTo(W/2-40,H-34);c.fill();
       c.restore();
       const lines=[[[4,5,5,7,8,8,9,9.5,11,11.6,12,12.4],'최근 1분 +0.4%',DIM],[[1,1.5,3,2.6,4,5.2,5,6.4,7,7.8,8.6,9.1],'추격 중 ▲ 최근 1분 +2.6%',UP]];
-      [[1,W*.23],[2,W*.77]].forEach(([i,cx],k)=>{
+      [[0,W*.23],[1,W*.77]].forEach(([i,cx],k)=>{
         const [name,v]=TRADERS[i];
         pfp(c,cx-72,76,144,i,true);chip(c,cx-98,68,54,42,i+1);
         text(c,name,cx,252,36,INK,'center',800);text(c,pct(v),cx,304,56,UP,'center',800);
@@ -368,7 +368,7 @@ const SCREENS=(()=>{
       });
       dot(c,W/2,150,58,NIGHT);c.strokeStyle=GOLD;c.lineWidth=4;c.beginPath();c.arc(W/2,150,58,0,Math.PI*2);c.stroke();
       text(c,'VS',W/2-3,153,52,INK,'center',800,'italic');
-      c.fillStyle=NIGHT;box(c,W/2-96,236,192,46,23);c.fill();c.strokeStyle=GOLD;c.lineWidth=2;c.stroke();text(c,'격차 3.3%p',W/2,260,24,GOLD,'center',800);
+      c.fillStyle=NIGHT;box(c,W/2-96,236,192,46,23);c.fill();c.strokeStyle=GOLD;c.lineWidth=2;c.stroke();text(c,'격차 6.2%p',W/2,260,24,GOLD,'center',800);
     },
     // 5 Session vote: who finishes first in this heat
     (c,W,H)=>{

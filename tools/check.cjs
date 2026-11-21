@@ -66,7 +66,7 @@ const base=process.argv[2];
     // schedule layer opens and closes; the hint text is gone; no insurance row; priced rows add up
     await page.locator('.tabs [data-open=schedule]').click();
     assert.equal(await page.locator('#schedule').evaluate(d=>d.open),true);
-    assert.equal(await page.locator('#schedule .timeline tr').count(),39);
+    assert.equal(await page.locator('#schedule .timeline tr').count(),32);
     const fits=await page.locator('#schedule').evaluate(d=>{const r=d.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1});
     assert.ok(fits,'schedule layer fits the viewport');
     await page.locator('#schedule [data-close]').click();
