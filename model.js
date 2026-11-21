@@ -178,8 +178,14 @@ function makeVenueRenderer(canvas) {
     return group;
   }
   const quad=(points,fill,shade=1,group)=>rect(points,fill,shade,group);
+  // A painted picture on any flat quad. Points run top-left, top-right, bottom-right, bottom-left as the viewer reads it.
+  // The canvas is painted once per key and kept, so a scene that is rebuilt often reuses its textures.
+  function picture(points,key,w,h,paint,group){
+    if(!signs.has(key)){const img=document.createElement('canvas');img.width=w;img.height=h;paint(img.getContext('2d'),w,h);signs.set(key,{img});}
+    rect(points,'#ffffff',1,group,signs.get(key));
+  }
   // top(true) marks the shapes that follow as the floor on show; setLift raises that floor by a height in metres.
-  return {setScene(build){shapes=[];topLayer=false;build({box,line,sign,quad,top(on){topLayer=!!on}});frame=null;draw();},
+  return {setScene(build){shapes=[];topLayer=false;build({box,line,sign,quad,picture,top(on){topLayer=!!on}});frame=null;draw();},
     setExtent(points){extent=points;frame=null;},setLift(height){lift=height;draw();},
     setCamera(a,e,z=1){angle=a;elevation=e;zoom=Math.max(.1,z);frame=null;draw();},draw,project,hit};
 }
@@ -198,6 +204,7 @@ function real(m){
     box(x0,h0,s0,x1,h1,s1,fill,stroke,group){m.box(X(x0),Y(s1),h0,x1-x0,s1-s0,h1-h0,fill,stroke,group)},
     line(a,b,color,width,group){m.line(P(a),P(b),color,width,group)},
     quad(points,fill,shade,group){m.quad(points.map(P),fill,shade,group)},
+    picture(points,key,w,h,paint,group){m.picture(points.map(P),key,w,h,paint,group)},
     sign(x0,h0,s,w,h,text,group,tone){m.sign(X(x0),Y(s),h0,w,h,text,group,tone)},
     top(on){m.top(on)},
     at:(x,h,s)=>[X(x),Y(s),h]
@@ -212,6 +219,71 @@ function interiorExtent(){
 
 // Banner and sign positions from the venue's signage guide (width x height in metres).
 var LED_MODE=0;   // exterior LED content type shown, cycled by the page
+var SCREEN_MODE=0;   // main LED screen content shown, cycled by the page
+// The four pictures the main LED screen cycles through: title, live ranking, a trader's chart and the session vote.
+// Each paints a W x H canvas; shapes are kept large because the screen is small in the drawing.
+const SCREENS=(()=>{
+  const face=' system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif', UP='#3ddc84', DOWN='#ff5c6c', INK='#ffffff', DIM='#a9b0d6';
+  const ground=(c,W,H)=>{const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1a1d4a');g.addColorStop(1,'#0e1030');c.fillStyle=g;c.fillRect(0,0,W,H);};
+  const text=(c,s,x,y,size,color,align='left',weight=700,style='')=>{c.font=style+' '+weight+' '+size+'px'+face;c.fillStyle=color;c.textAlign=align;c.textBaseline='middle';c.fillText(s,x,y);};
+  const fit=(c,s,maxW,size,weight,style)=>{c.font=style+' '+weight+' '+size+'px'+face;return Math.min(size,size*maxW/Math.max(1,c.measureText(s).width));};
+  const head=(c,W,title,right,rightColor=DIM)=>{
+    c.fillStyle='#ffffff14';c.fillRect(0,0,W,58);text(c,title,24,30,24,INK);if(right)text(c,right,W-24,30,24,rightColor,'right');
+  };
+  return [
+    // 1 Title card
+    (c,W,H)=>{
+      ground(c,W,H);
+      c.fillStyle=UP;c.fillRect(0,0,W,8);c.fillRect(0,H-8,W,8);
+      text(c,'Minted Labs × Nouns DAO',W/2,44,20,DIM,'center',600);
+      const lines=['SEOUL ONCHAIN','TRADING','CHAMPIONSHIP'], size=Math.min(...lines.map(s=>fit(c,s,W*.86,66,800,'italic')));
+      lines.forEach((s,i)=>text(c,s,W/2,104+i*62,size,INK,'center',800,'italic'));
+      text(c,'2026.12.19–20 · SJ KUNSTHALLE',W/2,H-36,20,UP,'center',700);
+    },
+    // 2 Live ranking of the four traders on stage
+    (c,W,H)=>{
+      ground(c,W,H);head(c,W,'조별 예선 A조 · 실시간 순위','12:34');
+      c.fillStyle=DOWN;c.fillRect(W-150,18,54,24);text(c,'LIVE',W-123,30,14,INK,'center',800);
+      [['TRADER 3',12.4],['TRADER 1',7.8],['TRADER 4',1.9],['TRADER 2',-3.2]].forEach(([name,v],i)=>{
+        const y=92+i*56, w=Math.abs(v)/12.4*250;
+        text(c,String(i+1),38,y,30,i<2?UP:DIM,'center',800);
+        text(c,name,70,y,24,INK);
+        c.fillStyle='#ffffff18';c.fillRect(230,y-14,250,28);
+        c.fillStyle=v<0?DOWN:UP;c.fillRect(230,y-14,w,28);
+        text(c,(v<0?'−':'+')+Math.abs(v).toFixed(1)+'%',W-24,y,26,v<0?DOWN:UP,'right',800);
+      });
+    },
+    // 3 One trader's screen: candles and the running return
+    (c,W,H)=>{
+      ground(c,W,H);head(c,W,'TRADER 1 · BTC-USDT','+7.8%',UP);
+      c.strokeStyle='#ffffff1c';c.lineWidth=1;for(let i=1;i<4;i++){const y=58+i*(H-78)/4;c.beginPath();c.moveTo(20,y);c.lineTo(W-20,y);c.stroke();}
+      const moves=[6,-4,9,5,-7,11,-3,8,-10,4,12,-5,7,9,-6,13,-4,6,10,-8,9,11], n=moves.length, step=(W-56)/n;
+      let price=96;
+      moves.forEach((d,i)=>{
+        const open=price, close=price+d, hi=Math.max(open,close)+4, lo=Math.min(open,close)-4, x=30+i*step, Y=p=>H-22-(p-80)*1.55;
+        c.fillStyle=c.strokeStyle=d<0?DOWN:UP;c.lineWidth=2;
+        c.beginPath();c.moveTo(x+step*.33,Y(hi));c.lineTo(x+step*.33,Y(lo));c.stroke();
+        c.fillRect(x,Math.min(Y(open),Y(close)),step*.66,Math.max(3,Math.abs(Y(open)-Y(close))));
+        price=close;
+      });
+    },
+    // 4 Session vote: who finishes first in this heat
+    (c,W,H)=>{
+      ground(c,W,H);head(c,W,'세션 투표 · 누가 1위일까?','마감 01:20',UP);
+      [['T1',38],['T2',27],['T3',21],['T4',14]].forEach(([name,v],i)=>{
+        const x=40+i*104, h=v/38*150, y0=H-52;
+        c.fillStyle='#ffffff18';c.fillRect(x,y0-150,70,150);
+        c.fillStyle=i?'#8d93ff':UP;c.fillRect(x,y0-h,70,h);
+        text(c,v+'%',x+35,y0-h-18,24,INK,'center',800);
+        text(c,name,x+35,H-28,22,DIM,'center',700);
+      });
+      const q=130, qx=W-q-34, qy=96;   // QR placeholder
+      c.fillStyle=INK;c.fillRect(qx,qy,q,q);c.fillStyle='#12142e';
+      for(let a=0;a<7;a++)for(let b=0;b<7;b++)if((a*5+b*3+a*b)%3===0||((a<2||a>4)&&(b<2||b>4)&&!(a>4&&b>4)))c.fillRect(qx+10+a*16,qy+10+b*16,14,14);
+      text(c,'플레이 카드로 투표',qx+q/2,qy+q+26,18,DIM,'center',700);
+    }
+  ];
+})();
 // Stage variants. Draft A ("draftA", shown on the site): pentagon stage, desks along the diagonal edges facing the audience.
 // Draft B ("draftB"): back edge 10 m like the screen, 2 x 2 desks per side turned 30 degrees, back row faces the audience,
 // front row faces the screen. 'line' is the old straight stage, 'facing' an early pentagon draft with desks facing each other.
@@ -408,8 +480,10 @@ function buildInterior(m,floor=1) {
   // The venue's fixed 10 x 5 m LED screen on the east wall.
   function screen(){
     r.box(24.0,.35,3.535,24.2,5.35,13.535,dark,steel,'stage');
-    r.box(23.96,.47,3.66,24.0,5.23,13.41,'#3d3a9e',dark,'stage');   // lit screen face
-    for(let i=0;i<9;i++){const s=4.3+i*1.06;r.line([23.945,.8,s],[23.945,4.9,s],'#878787',.45,'stage')}
+    r.box(23.96,.47,3.66,24.0,5.23,13.41,'#14163a',dark,'stage');   // lit screen face
+    // The picture on show, read from the hall: north end on the left, south end on the right.
+    const k=SCREEN_MODE%SCREENS.length;
+    r.picture([[23.955,5.23,3.66],[23.955,5.23,13.41],[23.955,.47,13.41],[23.955,.47,3.66]],'screen'+k,640,312,SCREENS[k],'stage');
   }
   // Indoor banner positions from the venue's signage guide.
   function hallBanners(wide,tall){
@@ -499,8 +573,6 @@ function buildInterior(m,floor=1) {
   r.box(20.4,0,3.2,23.95,SH,13.9,dark,steel,'stage');
   for(let j=1;j<=2;j++)r.box(20.4-.3*j,0,7.75,20.4-.3*(j-1),SH-.15*j,9.35,pale,steel,'stage');
   screen();
-  const trend=[0,.52,.34,.92,.64,1.04,.88,1.37,1.6];
-  for(let i=0;i<8;i++){const s=4.3+i*1.06;r.line([23.94,1.7+trend[i]*1.5,s],[23.94,1.7+trend[i+1]*1.5,s+1.06],'#e0e0e0',2,'stage')}
   r.box(20.72,SH,8.32,21.02,SH+1.1,8.78,steel,dark,'stage');                            // host lectern
   for(const s of [2.9,14.0])r.box(19.58,0,s,19.82,4.6,s+.2,dark,steel,'stage');        // ground-supported lighting truss
   r.box(19.55,4.6,2.9,19.85,4.9,14.2,steel,dark,'stage');
@@ -539,8 +611,6 @@ function buildInterior(m,floor=1) {
     r.box(22.7,0,A[1]-.3,23.7,H*2/3,A[1],pale,steel,'stage');
     r.box(22.7,0,A[1]-.6,23.7,H/3,A[1]-.3,pale,steel,'stage');
     screen();
-    const trend=[0,.52,.34,.92,.64,1.04,.88,1.37,1.6];
-    for(let i=0;i<8;i++){const s=4.3+i*1.06;r.line([23.94,1.7+trend[i]*1.5,s],[23.94,1.7+trend[i+1]*1.5,s+1.06],'#e0e0e0',2,'stage')}
     for(const s of [2.9,14.0])r.box(19.58,0,s,19.82,4.6,s+.2,dark,steel,'stage');        // ground-supported lighting truss
     r.box(19.55,4.6,2.9,19.85,4.9,14.2,steel,dark,'stage');
     for(let s=3.9;s<13.7;s+=1.3)r.box(19.59,4.28,s-.11,19.81,4.6,s+.11,dark,'none','stage');

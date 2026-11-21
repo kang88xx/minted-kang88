@@ -56,6 +56,8 @@ const base=process.argv[2];
     assert.deepEqual(await page.locator('.side[data-view=outside] .area').evaluateAll(n=>n.map(a=>a.dataset.id)),['banner','topbanner','signage','entrance']);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth); assert.ok(overflow<=1,'overflow '+overflow);
     assert.equal(await page.locator('html').getAttribute('lang'),lang);
+    // the main LED screen moves on to its next picture
+    await page.waitForFunction(()=>SCREEN_MODE>0,null,{timeout:8000});
     assert.deepEqual(errors,[]);
     // amounts show only in the budget section: none in the zone lists, the bubble or the detail
     await side.locator('.area[data-id=buffet]').click();
