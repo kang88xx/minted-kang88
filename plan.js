@@ -67,7 +67,7 @@ const zones = {
     t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관료 3,000만 원에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 테크니컬 팀이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
   players:[t('Main stage & competitor desks','메인 무대 · 선수 데스크'),t('Stage 10.70 × 3.90 m','무대 10.70 × 3.90 m · 선수 8석 · MC 1명'),
     t('Main stage and desks.','LED 스크린 앞에, 객석 쪽으로 꼭짓점이 튀어나온 오각형 무대를 둡니다(시안 A). 폭 10.70 m, 깊이 3.90 m, 높이 0.6 m이고, 위 모서리를 따라 흰 LED 띠를 두르고 비스듬한 두 면 스커트에 출력물을 붙입니다. 선수 데스크 8개는 사선 모서리를 따라 한쪽에 4석씩 놓습니다. 선수는 가운데 통로를 등지고 바깥쪽 객석을 봐서, 같은 쪽 객석에서는 얼굴 정면, 반대쪽에서는 옆얼굴이 보입니다. 모니터는 얼굴을 가리지 않게 데스크 바깥쪽 끝에 낮게 둡니다. MC는 앞 꼭짓점에 서고, 계단은 앞 꼭짓점과 북쪽 크루용 두 곳입니다. 심판·경기 진행 인력 2명과 예비 PC 2세트를 둡니다. 무대 위를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 각진 모양이라 대관처 기본 무대(6 × 2 m)로는 만들 수 없어 제작 무대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 시안 B(뒷줄은 객석, 앞줄은 스크린을 봄)는 아래 버튼에서 비교할 수 있습니다.')],
-  seats:[t('Audience seating','관객석'),t('112 seats · 10 crew planned','관람 112석 · 운영안 10명'),
+  seats:[t('Audience seating','관객석'),t('112 seats · 2 blocks of 8 × 7','관람 112석 · 8석 × 7열 2블록'),
     t('Two blocks of seven rows by eight chairs face the stage, with a centre aisle between them. The rear rows sit under the open atrium. The plan is for 500 guests, so most stand: in the lounge behind the seating and at the 2nd-floor railings. About 100 of the chairs can be the venue\'s free house chairs. Confirm aisles, accessible seating, exits and equipment clearances before fixing capacity.','무대를 향해 8석 × 7열 두 블록, 의자 112석을 배치한 제안입니다. 두 블록 사이에 가운데 통로를 두었고 뒤쪽 열은 아트리움 아래에 놓입니다. 계획 인원이 500명이라 대부분은 서서 봅니다. 객석 뒤 라운지와 2층 난간을 씁니다. 의자는 대관처 보유분 114개(접이식 50개 포함)를 먼저 쓰고 모자라는 만큼만 빌립니다. 통로, 휠체어석, 출입구와 장비 간격을 반영한 정원은 대관처와 확인합니다.')],
   booth:[t('Partner booths','파트너 부스'),t('7 booths · 3 shared crew','부스 7곳 · 공용 인력 3명'),
     t('Booths 1–3 use three of the four street-side bays on the ground floor; booths 4–7 use the north gallery room on the 2nd floor.','부스 1–3은 1층 가로 쪽 전시 칸 네 곳 중 등록대 옆 세 곳(칸마다 약 2.3 × 2.8 m)에, 부스 4–7은 2층 북쪽 전시실에 둡니다. 2층은 북쪽 벽을 따라 3곳(각 약 1.9 × 1.8 m), 계단 앞에 1곳(약 2.2 × 1.8 m)이고, 동쪽 끝은 계단 입구와 여자 화장실 문으로 가는 통로라 비워 둡니다. 부스마다 대관처 행사 테이블(1,500 × 700 mm) 1개와 배너 2개를 놓습니다. 공용 운영 2명, 로비 경호 1명, 각 부스 후원사 담당자 1명을 가정합니다. 부스 배치는 대관처와 협의합니다.')],
@@ -264,7 +264,12 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menu.open){menu.ope
 // Layer pop-ups for the schedule and the venue terms. Documents such as PDFs open in a new tab instead.
 document.addEventListener('click',e=>{
  const opener=e.target.closest('[data-open]');
- if(opener){e.preventDefault();document.getElementById(opener.dataset.open).showModal();return;}
+ if(opener){
+   e.preventDefault();const layer=document.getElementById(opener.dataset.open);layer.showModal();
+   // Plans wider than a phone scroll sideways; start them centred so both sides of the stage show.
+   for(const p of layer.querySelectorAll('.plan'))p.scrollLeft=(p.scrollWidth-p.clientWidth)/2;
+   return;
+ }
  const layer=e.target.closest('dialog.layer');
  if(layer&&(e.target===layer||e.target.closest('[data-close]')))layer.close();
 });

@@ -4,8 +4,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
 const assert=require('node:assert/strict');
 const base=process.argv[2];
 (async()=>{
-  const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--enable-unsafe-swiftshader']});
-  for(const [file,lang] of [['','ko']]) for(const [w,h] of [[1440,900],[390,844],[320,568],[844,390]]){
+  const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
+  for(const [file,lang] of [['','ko']]) for(const [w,h] of [[1440,900],[390,844],[375,667],[320,568],[844,390]]){
     const page=await (await browser.newContext({viewport:{width:w,height:h},deviceScaleFactor:2,hasTouch:w<1000})).newPage();
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.goto(base+file,{waitUntil:'networkidle'});
@@ -33,6 +33,8 @@ const base=process.argv[2];
     await inside.locator('.floors button[data-floor="3"]').click();
     assert.equal(await pressed(),'3'); assert.equal(await sel(),null);
     assert.deepEqual(await pins(),['rooms','gallery','facility']);
+    // a 1F-only icon pin (the door) is really gone from view on the upper floors
+    assert.equal(await inside.locator('.pin[data-id=door]').isVisible(),false);
     await side.locator('.area[data-id=facility]').click(); assert.equal(await pressed(),'3');
     await inside.locator('.floors button[data-floor="2"]').click(); assert.equal(await sel(),'facility');
     await inside.locator('.pin[data-id=vip]').click(); assert.equal(await sel(),'vip');
@@ -43,6 +45,14 @@ const base=process.argv[2];
       const out=await page.locator('.plate[data-view='+v+'] .scene').evaluate(sc=>{const r=sc.getBoundingClientRect();return [...sc.querySelectorAll('.pin:not([hidden])')].filter(p=>{const q=p.getBoundingClientRect();return q.left<r.left-1||q.right>r.right+1||q.top<r.top-1||q.bottom>r.bottom+1}).map(p=>p.dataset.id)});
       assert.deepEqual(out,[],v+' pins outside scene at '+w);
     }
+    // no two visible pins overlap, on any floor
+    const overlaps=sc=>{const ps=[...sc.querySelectorAll('.pin')].filter(p=>p.checkVisibility()).map(p=>[p.dataset.id,p.getBoundingClientRect()]);const o=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i][1],b=ps[j][1];if(a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom)o.push(ps[i][0]+'/'+ps[j][0])}return o};
+    assert.deepEqual(await page.locator('.plate[data-view=outside] .scene').evaluate(overlaps),[],'outside pin overlap at '+w);
+    for(const f of ['1','2','3']){
+      await inside.locator('.floors button[data-floor="'+f+'"]').click();await page.waitForFunction(()=>document.getAnimations().length===0);
+      assert.deepEqual(await inside.locator('.scene').evaluate(overlaps),[],'pin overlap on '+f+'F at '+w);
+    }
+    await inside.locator('.floors button[data-floor="1"]').click();
     assert.deepEqual(await page.locator('.side[data-view=outside] .area').evaluateAll(n=>n.map(a=>a.dataset.id)),['banner','topbanner','signage','entrance']);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth); assert.ok(overflow<=1,'overflow '+overflow);
     assert.equal(await page.locator('html').getAttribute('lang'),lang);

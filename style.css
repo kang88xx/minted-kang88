@@ -232,3 +232,47 @@ header details {justify-self:start;}
 .metric span {font-size:15px;font-weight:600;letter-spacing:-.01em;margin-top:4px;}
 .pin.icon svg path[fill=none] {fill:none;}
 .area .num.icon svg path[fill=none] {fill:none;stroke:#555;}
+/* A hidden pin stays hidden even when its own rule sets a display (icon pins) */
+[hidden]{display:none!important;}
+/* Phones: each zone list sits right under its drawing, and the interior toolbar takes two rows */
+@media(max-width:800px){
+ main{display:flex;flex-direction:column;}
+ #plans,#areas{display:contents;}
+ .plate[data-view=outside]{order:1;}
+ .side[data-view=outside]{order:2;margin:12px 0 22px;}
+ .plate[data-view=inside]{order:3;}
+ .side[data-view=inside]{order:4;margin:12px 0 4px;}
+ .metrics{order:5;}
+ .ledger{order:6;}
+ #basis{order:7;}
+ .striphead,.striphead .stripside{display:contents;}
+ .strip{column-gap:8px;}
+ .strip h2{order:1;margin-right:auto;}
+ .strip .floors{order:2;}
+ .plate[data-view=inside] .strip::after{content:'';order:3;flex-basis:100%;}
+ .strip .stripside small{order:4;}
+ .strip .tools{order:5;}
+ .strip .tools button{min-width:34px;padding:0 6px;}
+ .strip .tools button:last-child{padding:0 10px;}
+ .pin{width:26px;height:26px;font-size:9.5px;}
+ .pin.icon svg{width:14px;height:14px;}
+ .drafts .plan{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+ .drafts .plan svg{min-width:520px;}
+ .drafts h3::after{content:'옆으로 밀어 보기 ↔';display:block;margin-top:2px;color:var(--muted);font-size:12px;font-weight:500;}
+}
+@media(max-width:360px){.floors button{min-width:42px;padding:0 8px;}.strip h2{font-size:16px;}}
+/* Phones: budget rows as cards, so numbers never break mid-figure */
+@media(max-width:600px){
+ .ledger table,.ledger tbody,.ledger tfoot{display:block;}
+ .ledger thead{display:none;}
+ .ledger tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:14px;padding:11px 2px;border-bottom:1px solid var(--rule);}
+ .ledger tbody th,.ledger tbody td{border:0;padding:0;text-align:left;overflow-wrap:normal;}
+ .ledger tbody th{grid-column:1/-1;margin-bottom:3px;width:auto!important;}
+ .ledger tbody td:nth-child(2),.ledger tbody td:nth-child(3){grid-column:1;color:var(--muted);font-size:12.5px;text-align:left;}
+ .ledger tbody td:nth-child(2)::before{content:'수량 ';}
+ .ledger tbody td:nth-child(3)::before{content:'단가 ';}
+ .ledger tbody td:nth-child(4){grid-column:2;grid-row:2/4;align-self:center;text-align:right;white-space:nowrap;font-weight:600;}
+ .ledger tfoot tr{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--rule);}
+ .ledger tfoot th,.ledger tfoot td{border:0;padding:0;}
+ .ledger tfoot td{white-space:nowrap;}
+}

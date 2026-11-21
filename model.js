@@ -595,7 +595,8 @@ function buildInterior(m,floor=1) {
     r.box(x+.3,0,14.5,x+1.5,1.0,15.0,i%2?teal:steel,dark,'booth');
     for(const bx of [x+.3,x+1.3])r.box(bx,0,16.55,bx+.8,1.9,16.61,pale,steel,'booth');
   }
-  return {stage:r.at(23.95,3.9,8.5),players:STAGE_VARIANT!=='line'?r.at(22.9,THRUST.h+1.25,5.3):r.at(21.5,SH+1.05,5.7),seats:r.at(15.5,.9,8.55),
+  // Screen pin near the top of the screen, stage pin over the north bank of desks, so neither touches another pin.
+  return {stage:r.at(23.95,4.7,8.5),players:STAGE_VARIANT!=='line'?r.at(21.7,THRUST.h+1.3,5.6):r.at(21.5,SH+1.05,5.7),seats:r.at(15.5,.9,8.55),
     booth:r.at(3.66,1.1,14.75),gate:r.at(8.5,1.15,13.98),door:r.at(10.975,-.15,D+1.15),buffet:r.at(4.6,1.25,4.68),shared:r.at(.03,1.3,7.9),facility:r.at(11.95,1.96,N1),
     hangwide:r.at(XM+SIGNS.hallWide[0],F[1]+.25+SIGNS.hallWide[1],N1),hangtall:r.at((XE0+XE1)/2,.15+SIGNS.hallTall[1],SS)};
   }
