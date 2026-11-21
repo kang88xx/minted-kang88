@@ -3,72 +3,96 @@ const korean = document.documentElement.lang === 'ko';
 const t = (en, ko) => korean ? ko : en;
 const views = [
   {id:'outside', title:t('Exterior view','외관 입체도'), areaTitle:t('Exterior zones','외관 구역'), angle:-32, elevation:15,
-   zones:['exterior','banner','topbanner','signage','entrance']},
+   zones:['banner','topbanner','signage','entrance']},
   {id:'inside', title:t('Interior cutaway','내부 절개 투시도'), areaTitle:t('Interior zones','내부 구역'), angle:-32, elevation:35,
-   zones:['stage','players','seats','tech','booth','gate','buffet','hangwide','hangtall','vip','cast','rail','rooms','gallery','facility','shared']}
+   zones:['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','vip','cast','rooms','gallery','facility']}
 ];
 // Floors each interior zone is drawn on. Zones not listed here appear on every floor.
-const zoneFloors = {stage:[1], players:[1], seats:[1], tech:[1], gate:[1], buffet:[1], hangtall:[1], booth:[1,2], hangwide:[1,2],
-  vip:[2], cast:[2], rail:[2], rooms:[3], gallery:[3]};
+const zoneFloors = {stage:[1], players:[1], seats:[1], gate:[1], door:[1], buffet:[1], hangtall:[1], booth:[1,2], hangwide:[1,2],
+  vip:[2], cast:[2], rooms:[3], gallery:[3]};
 // Sizes of banner, sign and LED positions, shown with the zone name on the drawing.
-const specs = {banner:'11,820 × 5,680 mm', topbanner:'9,700 × 2,800 mm', signage:'약 2,070 × 2,300 mm × 12면', entrance:'사인 2,400 × 520 mm',
-  stage:'LED 10,000 × 5,000 mm', hangwide:'6,300 × 2,380 mm', hangtall:'2,430 × 5,540 mm'};
+const specs = {banner:'11,820 × 5,680 mm', topbanner:'9,700 × 2,800 mm', signage:'약 2,070 × 2,300 mm × 12면', glass:'LED 아님 · 일반 유리 1면', entrance:'사인 2,400 × 520 mm',
+  stage:'10,000 × 5,000 mm', hangwide:'6,300 × 2,380 mm', hangtall:'2,430 × 5,540 mm'};
 // Amounts exclude VAT. Zones without a set amount show a dash.
 const costs = {
+  stage:['대관료 포함','LED 스크린은 대관료 30,000,000원에 포함'],
   exterior:[t('KRW 30,000,000','30,000,000원'),t('venue hire and LED screen, 19–20 December, excl. VAT','대관·LED, 12월 19–20일, 부가세 별도')],
   banner:[t('approx. KRW 1,500,000','약 1,500,000원'),t('print and high-level installation, estimate','출력·고소 설치, 추정')],
   topbanner:['약 600,000원','선택 · 출력·고소 설치, 추정'],
   hangwide:['약 250,000원','선택 · 출력·설치, 추정'],
   hangtall:['약 250,000원','선택 · 출력·설치, 추정'],
-  players:[t('approx. KRW 1,000,000','약 1,000,000원'),t('10 PC sets, estimate','PC 10세트, 추정')],
-  seats:[t('approx. KRW 44,000','약 44,000원'),t('11 rented chairs, estimate','추가 임대 11석, 나머지는 대관처 보유 의자, 추정')],
-  booth:[t('approx. KRW 480,000','약 480,000원'),t('12 banners, estimate','배너 12개, 추정')],
-  gate:[t('approx. KRW 1,070,000','약 1,070,000원'),t('hosts, wristbands, draw tickets and badges, estimate','안내 스태프·팔찌·추첨권·명찰, 추정')],
-  buffet:[t('KRW 6,250,000','6,250,000원'),t('250 × KRW 25,000, unconfirmed, excl. VAT and delivery','250인분 × 25,000원, 확정 아님, 부가세·출장비 별도')]
+  players:[t('approx. KRW 2,000,000','약 2,000,000원'),t('10 PC sets × 2 days, estimate','PC 10세트 × 2일, 추정')],
+  seats:[t('approx. KRW 88,000','약 88,000원'),t('11 rented chairs × 2 days, estimate','추가 임대 11석 × 2일, 나머지는 대관처 보유 의자, 추정')],
+  booth:[t('approx. KRW 560,000','약 560,000원'),t('14 banners, estimate','배너 14개, 추정')],
+  gate:[t('approx. KRW 1,210,000','약 1,210,000원'),t('hosts, wristbands and draw tickets for 2 days, plus badges, estimate','안내 스태프·팔찌·추첨권 2일분과 명찰, 추정')],
+  buffet:[t('KRW 8,750,000','8,750,000원'),t('150 on 19 Dec + 200 on 20 Dec × KRW 25,000, unconfirmed, excl. VAT and delivery','19일 150인분 + 20일 200인분 × 25,000원, 확정 아님, 부가세·출장비 별도')]
 };
+// A button shown in the zone's bubble and detail: a document in a new tab, or a layer pop-up.
+const actions = {
+  buffet:{label:'케이터링 메뉴 PDF ↗', href:'catering-menu.pdf'},
+  banner:{label:'배너 시안 보기', open:'banner-layout'},
+  booth:{label:'부스 시안 보기', open:'booth-layout'},
+  topbanner:{label:'현수막 시안 보기', open:'topbanner-layout'},
+  hangwide:{label:'현수막 시안 보기', open:'hangwide-layout'},
+  hangtall:{label:'현수막 시안 보기', open:'hangtall-layout'},
+  signage:{label:'LED 송출 시안 보기', open:'led-layout'},
+  players:{label:'무대 시안 보기', open:'stage-drafts'}
+};
+function actionButton(id, cls){
+  const a=actions[id]; if(!a)return null;
+  let node;
+  if(a.href){node=element('a',cls,a.label);node.href=a.href;node.target='_blank';node.rel='noopener';}
+  else{node=element('button',cls,a.label);node.type='button';node.dataset.open=a.open;}
+  return node;
+}
+const ICONS = {
+  entrance:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10v18H5z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12.3" cy="12" r="1.2"/><path d="M17 12h5m-2.2-2.5L22 12l-2.2 2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  facility:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="4.2" r="2"/><path d="M5 7.5h4l1 7H8.6V21H5.4v-6.5H4z"/><circle cx="17" cy="4.2" r="2"/><path d="M15 7.5h4l2.2 8h-2.4V21h-3.6v-5.5h-2.4z"/></svg>'
+};
+ICONS.door = ICONS.entrance;   // the same door icon inside and outside
 const zones = {
   exterior:[t('Building & venue','건물·대관'),t('48 hours','48시간'),
     t('The building is 24.38 m wide and 17.07 m deep: shipping containers stacked on four floors around an atrium. The 48-hour hire on 19–20 December covers setup, both event days and teardown. Equipment loads in through the two-storey garage door on the west side. The seating plan still requires venue confirmation.','정면 24.38 m, 깊이 17.07 m 규모로, 아트리움 둘레에 컨테이너를 4개 층으로 쌓은 건물입니다. 12월 19–20일 48시간 대관 안에 설치, 이틀 행사, 철거를 모두 진행합니다. 장비는 서쪽 면의 2개 층 높이 개러지 도어로 반입합니다. 좌석 배치는 대관처 확인이 필요합니다.')],
   banner:['우측 중앙 현수막','11,820 × 5,680 mm',
-    '정면 오른쪽 컨테이너 벽의 2–3층에 거는 현수막 자리로, 대관처 규격은 가로 11,820 × 세로 5,680 mm입니다. 대관처가 피스·나사 시공을 허용하지 않으므로 고정 방식과 게시 기간은 대관처와 협의합니다.'],
+    '정면 오른쪽 컨테이너 벽의 2–3층에 거는 현수막 자리로, 대관처 규격은 가로 11,820 × 세로 5,680 mm입니다. 위쪽에 행사명을 크게 넣고, 아래에 파트너사를 등급별로 나열합니다. 1등급 1–2곳은 큰 로고, 2등급 6–10곳은 중간 크기 한 줄, 3등급은 작은 로고로 이어서 넣습니다. 대관처가 피스·나사 시공을 허용하지 않으므로 고정 방식과 게시 기간은 대관처와 협의합니다.'],
   topbanner:['좌측 상단 현수막','9,700 × 2,800 mm',
-    'LED 창 위, 4층 높이의 현수막 자리입니다. 대관처 규격은 가로 9,700 × 세로 2,800 mm입니다. 사용 여부는 선택이며, 우측 중앙 현수막과 함께 설치하면 고소 작업을 한 번에 끝낼 수 있습니다.'],
+    'LED 창 위, 4층 높이의 현수막 자리입니다. 대관처 규격은 가로 9,700 × 세로 2,800 mm입니다. 사용 여부는 선택이며, 우측 중앙 현수막과 함께 설치하면 고소 작업을 한 번에 끝낼 수 있습니다. 가로로 긴 면이라 행사명과 날짜를 한 줄로 크게 넣고, 오른쪽에 1등급 파트너 로고를 두는 안입니다.'],
   signage:['외벽 LED','약 2,070 × 2,300 mm × 12면',
-    '정면 왼쪽에 4열 × 3단으로 LED 창 12개가 있고, 창 하나는 약 2,070 × 2,300 mm입니다. 대관 시 무료로 쓰는 외부 컬러 LED 면으로 영상과 이미지를 송출할 수 있으며, 구현 방법은 계약 후 대관처가 메일로 안내합니다. 가운데 단의 글자는 송출 예시입니다.'],
+    '정면 왼쪽에 4열 × 3단으로 LED 창 12개가 있고, 창 하나는 약 2,070 × 2,300 mm입니다. 대관 시 무료로 쓰는 외부 컬러 LED 면으로 영상과 이미지를 송출할 수 있으며, 구현 방법은 계약 후 대관처가 메일로 안내합니다. 송출은 세 가지 화면을 번갈아 돌립니다. ① 가운데 2층 한 줄에 스폰서 로고와 문구를 길게 띄우는 화면, ② 1·2·3층 세 줄에 각각 띄우는 화면, ③ 창 12개마다 로고를 하나씩 띄우는 화면입니다. 영상도 넣을 수 있습니다. 도면에서도 세 화면이 차례로 바뀝니다. LED 창은 이 12개뿐이고, 오른쪽 출입문 위 2층 창은 LED가 아닌 일반 유리입니다.'],
+  glass:['출입문 위 유리창','2층 · 출입문 사인 위',
+    '왼쪽 LED 창 12개의 바로 오른쪽, 출입문 사인 위 2층에 있는 창입니다. 낮에는 LED 창과 비슷한 유리창으로 보이지만, 대관처 부착물 안내서의 야간 행사 사진(4쪽)에서는 왼쪽 12개에만 화면이 나오고 이 창은 꺼진 채 유리 너머 실내가 보입니다. 그래서 외부 컬러 LED 12면에 넣지 않고 일반 유리창으로 따로 표시했습니다. 이 창에 행사 이미지를 넣으려면 시트지나 출력물을 붙여야 하며, 부착 가능 여부와 방법은 대관처와 확인합니다.'],
   entrance:['관객 출입구','안내 3명',
     'LED 창 오른쪽 쌍문으로 들어서면 유리 전실을 지나 홀 안쪽 등록대로 이어집니다. 문 위 사인은 교체할 수 있고 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 등록대와 같은 안내 스태프 3명이 티켓을 확인하고 입장 팔찌를 채웁니다. 대관 시 무료 주차는 3대입니다. 차량 통제는 협의 중입니다.'],
-  stage:[t('Main stage','메인 무대'),t('1 host','MC 1명'),
-    t('The stage sits in front of the venue\'s fixed 10 × 5 m LED screen on the east wall. It is 3.55 m deep, 10.70 m wide and 0.45 m high. The host introduces each round and presents the awards, and the screen shows the live standings. Lighting stands on a ground-supported truss because the 3rd-floor gallery covers the stage at 5.78 m. The venue\'s free house stage is 6 × 2 m, so this size needs extra staging, and stage LED lighting is a paid venue option.','동쪽 벽에 고정된 10 × 5 m LED 스크린 앞에 무대를 둡니다. 무대는 깊이 3.55 m, 폭 10.70 m, 높이 0.45 m입니다. MC가 경기를 소개하고 시상을 진행하며, 스크린에는 실시간 순위가 표시됩니다. 무대 위 5.78 m 높이를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 대관처 기본 무대는 6,000 × 2,000 × 500 mm(계단 2개)라 이 크기는 추가 임대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
-  players:[t('Competitor desks','선수 데스크'),t('8 finalists · 2 officials','선수 8명 · 운영 2명'),
-    t('Eight desks stand in one line along the screen, in two groups of four, facing the audience with the screen behind them. Two officials oversee the match. The desks hide roughly the bottom 1.3 m of the screen, so on-screen graphics should sit above that. Allow room for capture equipment and test the two spare PC sets during rehearsal.','무대 위에 선수 데스크 8개를 스크린을 따라 한 줄로, 4개씩 두 묶음으로 놓습니다. 선수는 스크린을 등지고 관객을 봅니다. 심판·경기 진행 인력 2명을 배치합니다. 데스크가 스크린 아래쪽 1.3 m가량을 가리므로 화면 구성은 그 위쪽에 맞춥니다. 화면 캡처 장비와 예비 PC 2세트를 준비하고 리허설에서 점검합니다.')],
+  stage:[t('Main LED screen','메인 LED 스크린'),t('East wall · 10 × 5 m','동쪽 벽 고정 · 10 × 5 m'),
+    t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관료 3,000만 원에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 테크니컬 팀이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
+  players:[t('Main stage & competitor desks','메인 무대 · 선수 데스크'),t('Stage 10.70 × 3.90 m','무대 10.70 × 3.90 m · 선수 8석 · MC 1명'),
+    t('Main stage and desks.','LED 스크린 앞에, 객석 쪽으로 꼭짓점이 튀어나온 오각형 무대를 둡니다(시안 A). 폭 10.70 m, 깊이 3.90 m, 높이 0.6 m이고, 위 모서리를 따라 흰 LED 띠를 두르고 비스듬한 두 면 스커트에 출력물을 붙입니다. 선수 데스크 8개는 사선 모서리를 따라 한쪽에 4석씩 놓습니다. 선수는 가운데 통로를 등지고 바깥쪽 객석을 봐서, 같은 쪽 객석에서는 얼굴 정면, 반대쪽에서는 옆얼굴이 보입니다. 모니터는 얼굴을 가리지 않게 데스크 바깥쪽 끝에 낮게 둡니다. MC는 앞 꼭짓점에 서고, 계단은 앞 꼭짓점과 북쪽 크루용 두 곳입니다. 심판·경기 진행 인력 2명과 예비 PC 2세트를 둡니다. 무대 위를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 각진 모양이라 대관처 기본 무대(6 × 2 m)로는 만들 수 없어 제작 무대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 시안 B(뒷줄은 객석, 앞줄은 스크린을 봄)는 아래 버튼에서 비교할 수 있습니다.')],
   seats:[t('Audience seating','관객석'),t('112 seats · 10 crew planned','관람 112석 · 운영안 10명'),
     t('Two blocks of seven rows by eight chairs face the stage, with a centre aisle between them. The rear rows sit under the open atrium. The plan is for 500 guests, so most stand: in the lounge behind the seating and at the 2nd-floor railings. About 100 of the chairs can be the venue\'s free house chairs. Confirm aisles, accessible seating, exits and equipment clearances before fixing capacity.','무대를 향해 8석 × 7열 두 블록, 의자 112석을 배치한 제안입니다. 두 블록 사이에 가운데 통로를 두었고 뒤쪽 열은 아트리움 아래에 놓입니다. 계획 인원이 500명이라 대부분은 서서 봅니다. 객석 뒤 라운지와 2층 난간을 씁니다. 의자는 대관처 보유분 114개(접이식 50개 포함)를 먼저 쓰고 모자라는 만큼만 빌립니다. 통로, 휠체어석, 출입구와 장비 간격을 반영한 정원은 대관처와 확인합니다.')],
-  tech:[t('Broadcast desk','기술·중계석'),t('1 broadcast lead','중계 담당 1명'),
-    t('The control desk sits on a low riser behind the seating, on the centre line of the screen. One lead operates the competition feed and prepares screen content. The technical crew supports cameras, capture, switching and the single-channel stream. A second camera stands on the 2nd-floor balcony. House sound and four wireless microphones come free with the hire.','객석 뒤, 스크린 중심선 위의 낮은 단에 운영 콘솔을 둡니다. 담당자 1명이 전광판 화면과 대회 중계를 운영합니다. 기술 보조가 카메라·캡처·스위칭과 단일 채널 송출을 지원합니다. 두 번째 카메라는 2층 발코니에 둡니다. 기본 음향과 무선 마이크 4대는 대관 시 무료입니다.')],
-  booth:[t('Partner booths','파트너 부스'),t('6 booths · 3 shared crew','부스 6곳 · 공용 인력 3명'),
-    t('Booths 1–3 use three of the four street-side bays on the ground floor, next to check-in. Booths 4–6 use the south-west gallery room on the 2nd floor. Each booth has a table and two banners. Plan for two shared staff, one lobby guard and one partner representative per booth. Confirm the booth layout with the venue.','부스 1–3은 1층 가로 쪽 전시 칸 네 곳 중 등록대 옆 세 곳에, 부스 4–6은 2층 남서 전시실에 둡니다. 부스마다 테이블 1개와 배너 2개를 놓으며, 테이블은 대관처 행사 테이블(1,500 × 700 mm, 20개 보유)을 씁니다. 공용 운영 2명, 로비 경호 1명, 각 부스 후원사 담당자 1명을 가정합니다. 부스 배치는 대관처와 협의합니다.')],
+  booth:[t('Partner booths','파트너 부스'),t('7 booths · 3 shared crew','부스 7곳 · 공용 인력 3명'),
+    t('Booths 1–3 use three of the four street-side bays on the ground floor; booths 4–7 use the north gallery room on the 2nd floor.','부스 1–3은 1층 가로 쪽 전시 칸 네 곳 중 등록대 옆 세 곳(칸마다 약 2.3 × 2.8 m)에, 부스 4–7은 2층 북쪽 전시실에 둡니다. 2층은 북쪽 벽을 따라 3곳(각 약 1.9 × 1.8 m), 계단 앞에 1곳(약 2.2 × 1.8 m)이고, 동쪽 끝은 계단 입구와 여자 화장실 문으로 가는 통로라 비워 둡니다. 부스마다 대관처 행사 테이블(1,500 × 700 mm) 1개와 배너 2개를 놓습니다. 공용 운영 2명, 로비 경호 1명, 각 부스 후원사 담당자 1명을 가정합니다. 부스 배치는 대관처와 협의합니다.')],
+  door:['관객 출입구','정문 쌍문 · 언주로148길 쪽',
+    '관객은 건물 정면의 쌍문으로 들어와 유리 전실을 지나 바로 옆 등록대(05번)에서 티켓을 확인하고 입장 팔찌를 받습니다. 문 위 사인은 교체할 수 있으며 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 장비 반입은 서쪽 개러지 도어를 쓰고, 북쪽 개러지 도어는 비상 동선으로 비워 둡니다.'],
   gate:[t('Check-in','등록·입장'),t('3 hosts','안내 3명'),
-    t('The check-in desk stands at the street-side bay next to the entrance vestibule. The entrance team checks tickets, fits entry wristbands and hands out prize-draw tickets and guest packs there. Wristbands and draw tickets are ordered for 600: 500 guests plus a reserve of 100. These are the same staff shown at the exterior entrance.','출입구 전실 바로 옆 전시 칸 앞에 등록대를 둡니다. 안내 스태프 3명이 이곳에서 티켓 확인, 입장 팔찌 착용, 추첨권·굿즈 배부를 맡습니다. 팔찌와 추첨권은 관객 500명에 예비 100명을 더해 600개를 준비합니다. 외관에 표시된 관객 출입구와 같은 인력입니다.')],
-  buffet:[t('Bar & catering','바·케이터링'),t('250 guests','케이터링 250인분'),
-    t('Catering for 250 guests is planned with Deho Catering at KRW 25,000 per person, not yet confirmed. It is served from the venue\'s existing bar counters on the north side of the hall, in front of the kitchen. Guests eat standing at the lounge tables behind the seating. Keep the aisles and exits clear as guests collect food. Confirm catering access, hot holding, power and staffing with the venue and caterer.','드호 케이터링에 250인분을 1인 25,000원 기준으로 주문할 예정이며, 확정 전입니다. 홀 북쪽 주방 앞의 기존 바 카운터를 배식대로 씁니다. 관객은 객석 뒤 라운지의 스탠딩 테이블에서 식사합니다. 음식 수령 후 통로와 출입문을 비웁니다. 음식 반입, 온장, 전력과 인력은 대관처·업체와 협의합니다.')],
+    t('The check-in desk stands at the street-side bay next to the entrance vestibule. The entrance team checks tickets, fits entry wristbands and hands out prize-draw tickets and guest packs there. Wristbands and draw tickets are ordered for 600 per day, 500 guests plus a reserve of 100, with a different wristband colour each day. These are the same staff shown at the exterior entrance.','출입구 전실 바로 옆 전시 칸 앞에 등록대를 둡니다. 안내 스태프 3명이 이곳에서 티켓 확인, 입장 팔찌 착용, 추첨권·굿즈 배부를 맡습니다. 팔찌와 추첨권은 관객 500명에 예비 100명을 더해 날마다 600개씩 준비하고, 팔찌는 날짜별로 색을 다르게 합니다. 외관에 표시된 관객 출입구와 같은 인력입니다.')],
+  buffet:[t('Bar & catering','바·케이터링'),t('150 + 200 guests','케이터링 150 + 200인분'),
+    t('Catering is planned with Deho Catering at KRW 25,000 per person, not yet confirmed: 150 guests on 19 December and 200 on 20 December. If food runs short, pizza or fried chicken is ordered for delivery on the day. It is served from the venue\'s existing bar counters on the north side of the hall, in front of the kitchen. Guests eat standing at the lounge tables behind the seating. Keep the aisles and exits clear as guests collect food. Confirm catering access, hot holding, power and staffing with the venue and caterer.','드호 케이터링에 19일 150인분, 20일 200인분을 1인 25,000원 기준으로 주문할 예정이며, 확정 전입니다. 모자라면 현장에서 피자나 치킨을 배달 주문합니다. 홀 북쪽 주방 앞의 기존 바 카운터를 배식대로 씁니다. 관객은 객석 뒤 라운지의 스탠딩 테이블에서 식사합니다. 음식 수령 후 통로와 출입문을 비웁니다. 음식 반입, 온장, 전력과 인력은 대관처·업체와 협의합니다.')],
   hangwide:['실내 가로 현수막','6,300 × 2,380 mm',
-    '정문으로 들어서면 정면에 보이는 자리로, 북쪽 개러지 도어 위 2층 컨테이너 면입니다. 대관처 규격은 가로 6,300 × 세로 2,380 mm이며 사용 여부는 선택입니다.'],
+    '정문으로 들어서면 정면에 보이는 자리로, 북쪽 개러지 도어 위 2층 컨테이너 면입니다. 대관처 규격은 가로 6,300 × 세로 2,380 mm이며 사용 여부는 선택입니다. 입장객이 처음 보는 면이라 환영 문구와 행사명, 1·2등급 파트너 로고를 넣는 안입니다.'],
   hangtall:['실내 세로 현수막','2,430 × 5,540 mm',
-    'LED 스크린 오른쪽, 승강기 쪽 컨테이너 면에 2개 층 높이로 거는 자리입니다. 대관처 규격은 가로 2,430 × 세로 5,540 mm이며 사용 여부는 선택입니다. 홀을 가리지 않도록 도면에는 테두리만 그렸습니다.'],
-  rooms:['선수 대기실','3층 A룸 · B룸',
-    '3층 컨테이너 A룸과 B룸을 선수 8명의 대기실로 씁니다. 방 하나는 폭 2.44 m, 길이 약 12 m이고 북쪽 복도 쪽 문으로 드나듭니다. 무대까지는 북쪽 내부 계단이나 승강기로 내려갑니다. 서쪽 두 칸은 대관 제외 공간입니다.'],
-  gallery:['3층 갤러리','기본 대관 제외',
-    '무대 위쪽의 3층 갤러리는 기본 대관에 들어 있지 않고, 별도 협의 후 대관할 수 있습니다. 이 계획에서는 쓰지 않습니다. 홀 쪽 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.'],
+    'LED 스크린 오른쪽, 승강기 쪽 컨테이너 면에 2개 층 높이로 거는 자리입니다. 대관처 규격은 가로 2,430 × 세로 5,540 mm이며 사용 여부는 선택입니다. 홀을 가리지 않도록 도면에는 테두리만 그렸습니다. 세로로 긴 면이라 행사명을 세로로 쌓고, 이틀 일정과 1등급 파트너 로고를 아래에 넣는 안입니다.'],
+  rooms:['짐 보관 · 휴식 대기실','3층 A룸 · B룸 · 선수·VIP',
+    '3층 컨테이너 A룸과 B룸을 선수와 VIP의 짐 보관 및 휴식 대기실로 씁니다. 방 하나는 폭 2.44 m, 길이 약 12 m이고 북쪽 복도 쪽 문으로 드나듭니다. 안쪽에는 소파와 낮은 테이블을 두어 쉬는 공간으로, 가로 쪽 끝에는 짐 선반과 캐리어 자리를 둡니다. 방마다 출입 명단을 두고 스태프가 짐을 관리하며, 귀중품은 따로 맡습니다. 경기 직전 대기는 2층 선수 대기존을 쓰고, 무대까지는 북쪽 내부 계단이나 승강기로 내려갑니다. 서쪽 두 칸은 대관 제외 공간입니다.'],
+  gallery:['홀덤 게임존','3층 갤러리 · 테이블 2대 · 18석',
+    '무대 위쪽 3층 갤러리(약 7.2 × 14.3 m)를 홀덤 게임존으로 씁니다. 카지노형 홀덤 테이블(타원형, 약 2,800 × 1,400 mm) 2대를 한 줄로 놓고, 테이블마다 9석과 딜러 1명을 둡니다. 테이블 둘레로 관전할 공간이 넉넉하게 남습니다. 다리에서 들어오는 북쪽 입구 쪽은 비워 칩 지급·참가 등록 데스크를 둡니다. 3층 갤러리는 기본 대관에 들어 있지 않아 별도 협의 후 대관해야 합니다. 현금이나 코인 베팅, 칩 환전 없이 무료 칩으로만 진행하고, 순위 경품 지급 방식은 사전에 법률 검토를 받습니다. 홀 쪽 유리는 간단한 문자를 띄우는 흑백 LED 글라스라 게임존 순위를 띄울 수 있습니다.'],
   facility:['화장실 · 승강기 · 계단','1층 남 · 2층 여 · 3층 2칸',
     '화장실은 층마다 북쪽에 있습니다. 1층은 남자 화장실로, 주방 옆 컨테이너의 동쪽 끝 문으로 들어갑니다. 2층은 여자 화장실로, 북쪽 전시실 동쪽 끝 문을 지나야 합니다. 3층은 북서쪽 모서리에 2칸이 있습니다. 승강기는 남쪽 가로변 가운데에 있습니다. 북쪽 내부 계단이 1–3층을 잇고, 서쪽 계단은 1층 홀에서 2층 발코니로 올라갑니다.'],
-  vip:[t('VIP lounge','VIP 라운지'),t('2F · 12.19 × 4.88 m','2층 · 12.19 × 4.88 m'),
-    t('The north gallery room on the 2nd floor looks down on the stage through its LED glass wall, so it serves as the VIP lounge. The seating shown is a proposal.','2층 북쪽 전시실은 LED 유리벽 너머로 무대가 내려다보여 VIP 라운지로 씁니다. 이 유리벽은 홀 쪽으로 간단한 문자를 띄우는 흑백 LED 글라스입니다. 여자 화장실 문이 이 방 동쪽 끝에 있어, 화장실로 가는 통로를 비워 두어야 합니다. 표시한 좌석은 제안 배치입니다.')],
-  cast:[t('Commentary desk','해설석'),t('2F · 2 seats','2층 · 2석'),
-    t('Two commentators sit on the 2nd-floor south walkway, overlooking the hall and the screen. The 3rd-floor railing was ruled out because the gallery floor hides the top of the screen from there.','홀과 스크린이 내려다보이는 2층 남쪽 통로에 해설석 2석을 둡니다. 3층 난간에서는 갤러리 바닥에 가려 스크린 위쪽이 보이지 않아 2층을 골랐습니다.')],
+  vip:[t('VIP room & player waiting','VIP룸 · 선수 대기존'),t('2F south-west room','2층 남서 전시실 · 약 7.3 × 6.1 m'),
+    t('VIP room and player waiting zone.','2층 남서 전시실을 낮은 칸막이로 나눠, 서쪽은 소파와 낮은 테이블을 둔 VIP룸, 동쪽은 테이블 1개와 의자 8개를 둔 선수 대기존으로 씁니다. 1층 무대와 가깝고 북쪽 계단으로 바로 내려갈 수 있어 선수 호출이 쉽습니다. 소파는 대관처 팔걸이 의자(20개 보유)로 대신할 수 있습니다. 짐 보관과 휴식은 3층 A·B룸을 씁니다.')],
+  cast:[t('Technical team','테크니컬 팀'),t('2F south walkway','2층 남쪽 통로 · 영상 송출·음향'),
+    t('Video output, streaming and sound.','홀과 스크린이 내려다보이는 2층 남쪽 통로에 테크니컬 팀 자리를 둡니다. 스크린 송출, 중계 화면 전환, 음향 믹서를 이곳에서 운영하며 모니터 3대와 3석을 가정합니다. 무대와 스크린이 한눈에 보이고 관객 동선과 겹치지 않습니다. 1층 무대·스크린까지 영상·음향 케이블 경로와 전원은 대관처와 확인합니다.')],
   rail:[t('Balcony & standing rail','발코니·스탠딩 관람'),t('2F · balcony camera','2층 · 발코니 카메라'),
-    t('Standing guests can watch from the west balcony and the walkway railings on the 2nd floor. A camera on the balcony covers the stage and the audience. Confirm with the venue how many people the balcony may hold.','서서 보는 관객은 2층 서쪽 발코니와 통로 난간에서 관람할 수 있습니다. 발코니의 카메라가 무대와 객석을 잡습니다. 발코니 허용 인원은 대관처와 확인합니다.')],
-  shared:[t('Venue operations','공통 운영·시설'),t('4 crew planned','운영안 4명'),
-    t('Four roles cover production management, show calling, floor supervision, and emergency and accessibility support. The host team coordinates safety, logistics, cleaning and supplies. Equipment comes in through the west garage door, and the north garage door stays clear as the emergency route. After the event the host team removes all installations, cleans and restores the venue, using waste bags bought separately.','총괄 PM, 큐콜, 현장 감독, 응급·접근성 지원을 각 1명이 맡습니다. 주최팀이 안전, 물류, 청소와 현장 소모품을 관리합니다. 장비는 서쪽 개러지 도어로 반입하고, 북쪽 개러지 도어는 비상 동선으로 비워 둡니다. 행사 후에는 설치물 제거와 청소까지 마쳐 원상 복구하며, 종량제·분리수거 봉투는 따로 구매합니다.')]
+    t('Standing guests can watch from the west balcony and the walkway railings on the 2nd floor. A camera on the balcony covers the stage and the audience. Confirm with the venue how many people the balcony may hold.','서서 보는 관객은 2층 서쪽 발코니와 통로 난간에서 관람할 수 있습니다. 발코니의 카메라가 무대와 객석을 잡습니다. 발코니 허용 인원은 대관처와 확인합니다.')]
 };
 function element(tag, className, value) {
   const node=document.createElement(tag);
@@ -80,7 +104,8 @@ function mountView(view){
  const inside=view.id==='inside', plate=element('section','plate'), side=element('section','side');
  plate.dataset.view=side.dataset.view=view.id;
  const strip=element('div','strip'), scene=element('div','scene'), model=element('canvas'), pins=element('div','pins');
- strip.append(element('h2','',view.title));
+ // Title strip: title and floor switch on the left, view tools on the right.
+ const head=element('div','striphead');head.append(element('h2','',view.title));strip.append(head);
  const floorButtons=[];
  if(inside){
    const aside=element('div','stripside'),switcher=element('div','floors');
@@ -92,13 +117,13 @@ function mountView(view){
    }
    const link=element('a','',t('Venue floor plan ↗','공식 도면 ↗'));
    link.href='https://www.sjkunsthalle.com/_files/ugd/f9390f_e8d3d3e585f7497288ba45912c586fef.pdf#page=3';
-   link.target='_blank';link.rel='noopener';const note=element('small');note.append(link);aside.append(switcher,note);strip.append(aside);
+   link.target='_blank';link.rel='noopener';const note=element('small');note.append(link);aside.append(switcher,note);head.append(aside);
  }
  const instructions=t('Drag to rotate · Select a numbered zone','드래그로 회전 · 번호로 구역 선택');
  model.setAttribute('aria-label',view.title+' · '+instructions);
- const tip=element('div','cost-tip'),tipTitle=element('span'),tipSpec=element('small'),tipValue=element('strong','','-');
- tip.setAttribute('aria-hidden','true');tip.append(tipTitle,tipSpec,tipValue);scene.append(model,pins,tip);
- const controls=element('div','controls'),tools=element('div','tools');controls.append(tools);plate.append(strip,scene,controls);
+ const tip=element('div','cost-tip'),tipTitle=element('span'),tipSpec=element('small'),tipValue=element('strong','','-'),tipAction=element('div','tip-action');
+ tip.append(tipTitle,tipSpec,tipValue,tipAction);scene.append(model,pins,tip);
+ const tools=element('div','tools');strip.append(tools);plate.append(strip,scene);
  document.querySelector('#plans').append(plate);
  const list=element('div','list'), detail=element('section','detail'), sideHead=element('div','sidehead');
  detail.setAttribute('aria-live','polite');sideHead.append(element('h2','',view.areaTitle));side.append(sideHead,list,detail);
@@ -107,7 +132,14 @@ function mountView(view){
  let anchors,floor=1,dropping=0;
  if(inside)renderer.setExtent(interiorExtent());
  if(inside)renderer.setScene(m=>{anchors=buildInterior(m,floor)});
- else renderer.setScene(m=>{anchors=buildExterior(m)});
+ else{
+   renderer.setScene(m=>{anchors=buildExterior(m)});
+   // The LED face cycles through its three content types, unless the viewer prefers no motion.
+   if(!matchMedia('(prefers-reduced-motion: reduce)').matches)setInterval(()=>{
+     if(document.hidden)return;
+     LED_MODE=(LED_MODE+1)%3;renderer.setScene(m=>{anchors=buildExterior(m)});queueDraw();
+   },1750);
+ }
  let angle=view.angle,elevation=view.elevation,zoom=1,selected=null,pending=0;   // nothing is selected until the viewer picks a zone
  const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
  function place(){
@@ -172,21 +204,23 @@ function mountView(view){
    }
    tipTitle.textContent=name;tipSpec.textContent=specs[id]||'';tipSpec.hidden=!specs[id];
    const cost=costs[id];tipValue.textContent=cost?cost[0]:'-';
+   const tipButton=actionButton(id,'tabpill');tipAction.replaceChildren(...(tipButton?[tipButton]:[]));tipAction.hidden=!tipButton;
    const data=element('div','data');data.append(element('b','',info),element('span','',t('Budget','예산')+'  '+(cost?cost[0]+' ('+cost[1]+')':'-')));
    if(specs[id])data.prepend(element('b','spec',specs[id]));
    detail.replaceChildren(element('h3','',name),data,element('p','',desc));
-   if(id==='buffet'){
-     const menu=element('a','tabpill',t('Catering menu (PDF) ↗','케이터링 메뉴 PDF ↗'));
-     menu.href='catering-menu.pdf';menu.target='_blank';menu.rel='noopener';detail.append(menu);
-   }
+   const detailButton=actionButton(id,'tabpill');if(detailButton)detail.append(detailButton);
    place();
  }
- view.zones.forEach((id,i)=>{
-   const name=zones[id][0],number=String(i+1).padStart(2,'0');
-   const row=element('button','area'),label=element('span');
-   label.append(element('i','num',number),document.createTextNode(name));row.append(label,element('small','',costs[id]?costs[id][0]:'-'));
+ let count=0;
+ view.zones.forEach(id=>{
+   // Building services get an icon instead of a number.
+   const name=zones[id][0],icon=ICONS[id],number=icon?'':String(++count).padStart(2,'0');
+   const row=element('button','area'),label=element('span'),num=element('i','num',number);
+   if(icon){num.classList.add('icon');num.innerHTML=icon;}
+   label.append(num,document.createTextNode(name));row.append(label,element('small','',costs[id]?costs[id][0]:'-'));
    const pin=element('button','pin',number);pin.title=name;
-   for(const btn of [row,pin]){btn.type='button';btn.dataset.id=id;btn.setAttribute('aria-label',number+' · '+name);btn.onclick=()=>choose(id);}
+   if(icon){pin.classList.add('icon');pin.innerHTML=icon;}
+   for(const btn of [row,pin]){btn.type='button';btn.dataset.id=id;btn.setAttribute('aria-label',(number?number+' · ':'')+name);btn.onclick=()=>choose(id);}
    pins.append(pin);list.append(row);
  });
  function tool(label,symbol,fn){
@@ -210,7 +244,8 @@ function mountView(view){
    if(drag.moved){angle=drag.a-dx*.35;elevation=clamp(drag.h+dy*.23,8,68);queueDraw();}
  };
  model.onpointerup=e=>{
-   if(drag&&drag.id===e.pointerId&&!drag.moved){const id=renderer.hit(e.clientX,e.clientY);if(anchors[id])choose(id);}
+   // A tap on a zone opens it; a tap on empty space closes the open bubble and detail.
+   if(drag&&drag.id===e.pointerId&&!drag.moved){const id=renderer.hit(e.clientX,e.clientY);if(anchors[id]&&view.zones.includes(id))choose(id);else if(selected)clear();}
    drag=null;
  };
  model.onpointercancel=()=>{drag=null};

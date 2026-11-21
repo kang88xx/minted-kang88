@@ -16,11 +16,11 @@ const base=process.argv[2];
     assert.equal(await pressed(),'1');
     // nothing is selected and no bubble or detail shows until a zone is picked
     assert.equal(await page.locator('.cost-tip:visible, .detail:visible, .area.sel, .pin.sel').count(),0);
-    assert.deepEqual(await pins(),['stage','players','seats','tech','booth','gate','buffet','hangwide','hangtall','facility','shared']);
+    assert.deepEqual(await pins(),['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','facility']);
     // a 2F-only zone picked from the list switches the drawing to 2F
     await side.locator('.area[data-id=cast]').click();
     assert.equal(await pressed(),'2'); assert.equal(await sel(),'cast');
-    assert.deepEqual(await pins(),['booth','hangwide','vip','cast','rail','facility','shared']);
+    assert.deepEqual(await pins(),['booth','hangwide','vip','cast','facility']);
     // switching back by hand deselects a zone that is not on that floor
     await inside.locator('.floors button[data-floor="1"]').click();
     assert.equal(await pressed(),'1'); assert.equal(await sel(),null);
@@ -32,7 +32,7 @@ const base=process.argv[2];
     // 3F: its own zones, and a zone shared by all floors keeps its selection
     await inside.locator('.floors button[data-floor="3"]').click();
     assert.equal(await pressed(),'3'); assert.equal(await sel(),null);
-    assert.deepEqual(await pins(),['rooms','gallery','facility','shared']);
+    assert.deepEqual(await pins(),['rooms','gallery','facility']);
     await side.locator('.area[data-id=facility]').click(); assert.equal(await pressed(),'3');
     await inside.locator('.floors button[data-floor="2"]').click(); assert.equal(await sel(),'facility');
     await inside.locator('.pin[data-id=vip]').click(); assert.equal(await sel(),'vip');
@@ -43,14 +43,14 @@ const base=process.argv[2];
       const out=await page.locator('.plate[data-view='+v+'] .scene').evaluate(sc=>{const r=sc.getBoundingClientRect();return [...sc.querySelectorAll('.pin:not([hidden])')].filter(p=>{const q=p.getBoundingClientRect();return q.left<r.left-1||q.right>r.right+1||q.top<r.top-1||q.bottom>r.bottom+1}).map(p=>p.dataset.id)});
       assert.deepEqual(out,[],v+' pins outside scene at '+w);
     }
-    assert.deepEqual(await page.locator('.side[data-view=outside] .area').evaluateAll(n=>n.map(a=>a.dataset.id)),['exterior','banner','topbanner','signage','entrance']);
+    assert.deepEqual(await page.locator('.side[data-view=outside] .area').evaluateAll(n=>n.map(a=>a.dataset.id)),['banner','topbanner','signage','entrance']);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth); assert.ok(overflow<=1,'overflow '+overflow);
     assert.equal(await page.locator('html').getAttribute('lang'),lang);
     assert.deepEqual(errors,[]);
     // schedule layer opens and closes; the hint text is gone; no insurance row; priced rows add up
     await page.locator('.tabs [data-open=schedule]').click();
     assert.equal(await page.locator('#schedule').evaluate(d=>d.open),true);
-    assert.equal(await page.locator('#schedule .timeline tr').count(),18);
+    assert.equal(await page.locator('#schedule .timeline tr').count(),29);
     const fits=await page.locator('#schedule').evaluate(d=>{const r=d.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1});
     assert.ok(fits,'schedule layer fits the viewport');
     await page.locator('#schedule [data-close]').click();
@@ -58,12 +58,12 @@ const base=process.argv[2];
     assert.equal(await page.locator('.controls small').count(),0);
     await page.locator('#budget summary').click();
     const sum=await page.locator('#budget tbody tr td:last-child').evaluateAll(n=>n.map(c=>+(c.textContent.replace(/[^0-9]/g,'')||0)).reduce((a,b)=>a+b,0));
-    assert.equal(sum,42284000);
-    assert.match(await page.locator('#budget tfoot tr:first-child td').textContent(),/42,284,000/);
+    assert.equal(sum,46888000);
+    assert.match(await page.locator('#budget tfoot tr:first-child td').textContent(),/46,888,000/);
     assert.ok(!/보험|insurance/i.test(await page.locator('body').innerText()));
     assert.equal(await page.locator('.metric').count(),4);
     assert.equal(await page.locator('.language, [hreflang]').count(),0);
-    assert.match(await page.locator('header .updated').textContent(),/최근 업데이트 2026년 11월 20일/);
+    assert.match(await page.locator('header .updated').textContent(),/최근 업데이트 2026년 11월 21일 [0-9]{2}:[0-9]{2} \(한국시간\)/);
     const hd=await page.evaluate(()=>{const u=document.querySelector('.updated').getBoundingClientRect(),m=document.querySelector('.menupill').getBoundingClientRect();return {gap:u.left-m.right,off:Math.abs((u.left+u.right)/2-innerWidth/2)}});
     assert.ok(hd.off<2,'update text centred '+hd.off); assert.ok(await page.locator('.menupill').evaluate(e=>e.getBoundingClientRect().height<50),'menu pill on one line');
     const pdf=await page.request.get(new URL('catering-menu.pdf',page.url()).href); assert.equal(pdf.status(),200); assert.match(pdf.headers()['content-type'],/pdf/);
