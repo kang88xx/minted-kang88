@@ -5,15 +5,17 @@ const views = [
   {id:'outside', title:t('Exterior view','외관 입체도'), areaTitle:t('Exterior zones','외관 구역'), angle:-32, elevation:15,
    zones:['banner','topbanner','signage','entrance']},
   {id:'inside', title:t('Interior cutaway','내부 절개 투시도'), areaTitle:t('Interior zones','내부 구역'), angle:-32, elevation:35,
-   zones:['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','vip','cast','rooms','gallery','facility']}
+   zones:['stage','players','seats','booth','gate','door','buffet','hangwide','hangtall','vip','cast','rooms','interview','gallery','facility']}
 ];
 // Floors each interior zone is drawn on. Zones not listed here appear on every floor.
 const zoneFloors = {stage:[1], players:[1], seats:[1], gate:[1], door:[1], buffet:[1], hangtall:[1], booth:[1,2], hangwide:[1,2],
-  vip:[2], cast:[2], rooms:[3], gallery:[3]};
+  vip:[2], cast:[2], rooms:[3], interview:[3], gallery:[3]};
 // Sizes of banner, sign and LED positions, shown with the zone name on the drawing.
 const specs = {banner:'11,820 × 5,680 mm', topbanner:'9,700 × 2,800 mm', signage:'약 2,070 × 2,300 mm × 12면', glass:'LED 아님 · 일반 유리 1면', entrance:'사인 2,400 × 520 mm',
   stage:'10,000 × 5,000 mm', hangwide:'6,300 × 2,380 mm', hangtall:'2,430 × 5,540 mm'};
 // Amounts exclude VAT. Zones without a set amount show a dash.
+// For now the user wants amounts only in the budget section at the bottom: the zone lists, bubbles and details leave them out.
+const SHOW_ZONE_COSTS=false;
 const costs = {
   stage:['대관료 포함','LED 스크린은 대관료 30,000,000원에 포함'],
   exterior:[t('KRW 30,000,000','30,000,000원'),t('venue hire and LED screen, 19–20 December, excl. VAT','대관·LED, 12월 19–20일, 부가세 별도')],
@@ -64,7 +66,7 @@ const zones = {
   entrance:['관객 출입구','안내 3명',
     'LED 창 오른쪽 쌍문으로 들어서면 유리 전실을 지나 홀 안쪽 등록대로 이어집니다. 문 위 사인은 교체할 수 있고 규격은 외측 2,400 × 520 mm, 내측 2,330 × 465 mm입니다. 등록대와 같은 안내 스태프 3명이 티켓을 확인하고 입장 팔찌를 채웁니다. 대관 시 무료 주차는 3대입니다. 차량 통제는 협의 중입니다.'],
   stage:[t('Main LED screen','메인 LED 스크린'),t('East wall · 10 × 5 m','동쪽 벽 고정 · 10 × 5 m'),
-    t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관료 3,000만 원에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 테크니컬 팀이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
+    t('The venue fixed LED screen.','동쪽 벽에 고정된 대관처의 메인 LED 스크린으로, 가로 10,000 × 세로 5,000 mm입니다. 대관처에서는 별도 옵션이지만 이번 대관에 포함했습니다. 대회 중에는 실시간 순위, 선수 화면, 중계 화면을 띄우고, 무대 프로그램 때는 발표 자료와 파트너 영상을 띄웁니다. 송출은 2층 테크니컬 팀이 맡습니다. 무대와 선수 데스크가 스크린 아래쪽을 일부 가리므로 중요한 그래픽은 화면 위쪽에 둡니다. 스크린 위 3층 갤러리 유리는 간단한 문자를 띄우는 흑백 LED 글라스입니다.')],
   players:[t('Main stage & competitor desks','메인 무대 · 선수 데스크'),t('Stage 10.70 × 3.90 m','무대 10.70 × 3.90 m · 선수 8석 · MC 1명'),
     t('Main stage and desks.','LED 스크린 앞에, 객석 쪽으로 꼭짓점이 튀어나온 오각형 무대를 둡니다(시안 A). 폭 10.70 m, 깊이 3.90 m, 높이 0.6 m이고, 위 모서리를 따라 흰 LED 띠를 두르고 비스듬한 두 면 스커트에 출력물을 붙입니다. 선수 데스크 8개는 사선 모서리를 따라 한쪽에 4석씩 놓습니다. 선수는 가운데 통로를 등지고 바깥쪽 객석을 봐서, 같은 쪽 객석에서는 얼굴 정면, 반대쪽에서는 옆얼굴이 보입니다. 모니터는 얼굴을 가리지 않게 데스크 바깥쪽 끝에 낮게 둡니다. MC는 앞 꼭짓점에 서고, 계단은 앞 꼭짓점과 북쪽 크루용 두 곳입니다. 심판·경기 진행 인력 2명과 예비 PC 2세트를 둡니다. 무대 위를 3층 갤러리가 덮고 있어 조명은 지상 지지식 트러스에 답니다. 각진 모양이라 대관처 기본 무대(6 × 2 m)로는 만들 수 없어 제작 무대가 필요하고, 무대용 LED 조명은 대관처 별도 옵션입니다. 시안 B(뒷줄은 객석, 앞줄은 스크린을 봄)는 아래 버튼에서 비교할 수 있습니다.')],
   seats:[t('Audience seating','관객석'),t('112 seats · 2 blocks of 8 × 7','관람 112석 · 8석 × 7열 2블록'),
@@ -76,19 +78,21 @@ const zones = {
   gate:[t('Check-in','등록·입장'),t('3 hosts','안내 3명'),
     t('The check-in desk stands at the street-side bay next to the entrance vestibule. The entrance team checks tickets, fits entry wristbands and hands out prize-draw tickets and guest packs there. Wristbands and draw tickets are ordered for 600 per day, 500 guests plus a reserve of 100, with a different wristband colour each day. These are the same staff shown at the exterior entrance.','출입구 전실 바로 옆 전시 칸 앞에 등록대를 둡니다. 안내 스태프 3명이 이곳에서 티켓 확인, 입장 팔찌 착용, 추첨권·굿즈 배부를 맡습니다. 팔찌와 추첨권은 관객 500명에 예비 100명을 더해 날마다 600개씩 준비하고, 팔찌는 날짜별로 색을 다르게 합니다. 외관에 표시된 관객 출입구와 같은 인력입니다.')],
   buffet:[t('Bar & catering','바·케이터링'),t('150 + 200 guests','케이터링 150 + 200인분'),
-    t('Catering is planned with Deho Catering at KRW 25,000 per person, not yet confirmed: 150 guests on 19 December and 200 on 20 December. If food runs short, pizza or fried chicken is ordered for delivery on the day. It is served from the venue\'s existing bar counters on the north side of the hall, in front of the kitchen. Guests eat standing at the lounge tables behind the seating. Keep the aisles and exits clear as guests collect food. Confirm catering access, hot holding, power and staffing with the venue and caterer.','드호 케이터링에 19일 150인분, 20일 200인분을 1인 25,000원 기준으로 주문할 예정이며, 확정 전입니다. 모자라면 현장에서 피자나 치킨을 배달 주문합니다. 홀 북쪽 주방 앞의 기존 바 카운터를 배식대로 씁니다. 관객은 객석 뒤 라운지의 스탠딩 테이블에서 식사합니다. 음식 수령 후 통로와 출입문을 비웁니다. 음식 반입, 온장, 전력과 인력은 대관처·업체와 협의합니다.')],
+    t('Catering is planned with Deho Catering at KRW 25,000 per person, not yet confirmed: 150 guests on 19 December and 200 on 20 December. If food runs short, pizza or fried chicken is ordered for delivery on the day. It is served from the venue\'s existing bar counters on the north side of the hall, in front of the kitchen. Guests eat standing at the lounge tables behind the seating. Keep the aisles and exits clear as guests collect food. Confirm catering access, hot holding, power and staffing with the venue and caterer.','드호 케이터링에 19일 150인분, 20일 200인분을 주문할 예정이며, 확정 전입니다. 모자라면 현장에서 피자나 치킨을 배달 주문합니다. 홀 북쪽 주방 앞의 기존 바 카운터를 배식대로 씁니다. 관객은 객석 뒤 라운지의 스탠딩 테이블에서 식사합니다. 음식 수령 후 통로와 출입문을 비웁니다. 음식 반입, 온장, 전력과 인력은 대관처·업체와 협의합니다.')],
   hangwide:['실내 가로 현수막','6,300 × 2,380 mm',
     '정문으로 들어서면 정면에 보이는 자리로, 북쪽 개러지 도어 위 2층 컨테이너 면입니다. 대관처 규격은 가로 6,300 × 세로 2,380 mm이며 사용 여부는 선택입니다. 입장객이 처음 보는 면이라 환영 문구와 행사명, 1·2등급 파트너 로고를 넣는 안입니다.'],
   hangtall:['실내 세로 현수막','2,430 × 5,540 mm',
     'LED 스크린 오른쪽, 승강기 쪽 컨테이너 면에 2개 층 높이로 거는 자리입니다. 대관처 규격은 가로 2,430 × 세로 5,540 mm이며 사용 여부는 선택입니다. 홀을 가리지 않도록 도면에는 테두리만 그렸습니다. 세로로 긴 면이라 행사명을 세로로 쌓고, 이틀 일정과 1등급 파트너 로고를 아래에 넣는 안입니다.'],
-  rooms:['짐 보관 · 휴식 대기실','3층 A룸 · B룸 · 선수·VIP',
-    '3층 컨테이너 A룸과 B룸을 선수와 VIP의 짐 보관 및 휴식 대기실로 씁니다. 방 하나는 폭 2.44 m, 길이 약 12 m이고 북쪽 복도 쪽 문으로 드나듭니다. 안쪽에는 소파와 낮은 테이블을 두어 쉬는 공간으로, 가로 쪽 끝에는 짐 선반과 캐리어 자리를 둡니다. 방마다 출입 명단을 두고 스태프가 짐을 관리하며, 귀중품은 따로 맡습니다. 경기 직전 대기는 2층 선수 대기존을 쓰고, 무대까지는 북쪽 내부 계단이나 승강기로 내려갑니다. 서쪽 두 칸은 대관 제외 공간입니다.'],
+  rooms:['짐 보관 · 휴식 대기실','3층 B룸 · 선수·VIP',
+    '3층 컨테이너 B룸을 선수와 VIP의 짐 보관 및 휴식 대기실로 씁니다. 방은 폭 2.44 m, 길이 약 12 m이고 북쪽 복도 쪽 문으로 드나듭니다. 안쪽에는 소파와 낮은 테이블을 두어 쉬는 공간으로, 가로 쪽 끝에는 짐 선반과 캐리어 자리를 둡니다. 출입 명단을 두고 스태프가 짐을 관리하며, 귀중품은 따로 맡습니다. 경기 직전 대기는 2층 선수 대기존을 쓰고, 무대까지는 북쪽 내부 계단이나 승강기로 내려갑니다. 옆 A룸은 인터뷰룸으로 쓰고, 서쪽 두 칸은 대관 제외 공간입니다.'],
+  interview:['인터뷰룸','3층 A룸 · 선수 인터뷰·촬영',
+    '3층 컨테이너 A룸을 인터뷰룸으로 씁니다. 홀 쪽 벽이 유리인 방으로, 폭 2.44 m, 길이 약 12 m입니다. 가로 쪽 끝에 배경 가림막을 세우고 그 앞에 의자 2개, 카메라 1대와 조명 2대를 둡니다. 문 쪽에는 다음 차례가 기다리는 의자 3개와 촬영본을 확인하는 테이블을 둡니다. 경기 직후 선수 인터뷰와 매체 촬영에 씁니다. 무대 진행 중에도 녹음하려면 문을 닫고 써야 하며, 홀 소리가 유리로 얼마나 들어오는지는 현장에서 확인해야 합니다. 선수는 옆 B룸 대기실이나 2층 선수 대기존에서 건너옵니다.'],
   gallery:['홀덤 게임존','3층 갤러리 · 테이블 2대 · 18석',
     '무대 위쪽 3층 갤러리(약 7.2 × 14.3 m)를 홀덤 게임존으로 씁니다. 카지노형 홀덤 테이블(타원형, 약 2,800 × 1,400 mm) 2대를 한 줄로 놓고, 테이블마다 9석과 딜러 1명을 둡니다. 테이블 둘레로 관전할 공간이 넉넉하게 남습니다. 다리에서 들어오는 북쪽 입구 쪽은 비워 칩 지급·참가 등록 데스크를 둡니다. 3층 갤러리는 기본 대관에 들어 있지 않아 별도 협의 후 대관해야 합니다. 현금이나 코인 베팅, 칩 환전 없이 무료 칩으로만 진행하고, 순위 경품 지급 방식은 사전에 법률 검토를 받습니다. 홀 쪽 유리는 간단한 문자를 띄우는 흑백 LED 글라스라 게임존 순위를 띄울 수 있습니다.'],
   facility:['화장실 · 승강기 · 계단','1층 남 · 2층 여 · 3층 2칸',
     '화장실은 층마다 북쪽에 있습니다. 1층은 남자 화장실로, 주방 옆 컨테이너의 동쪽 끝 문으로 들어갑니다. 2층은 여자 화장실로, 북쪽 전시실 동쪽 끝 문을 지나야 합니다. 3층은 북서쪽 모서리에 2칸이 있습니다. 승강기는 남쪽 가로변 가운데에 있습니다. 북쪽 내부 계단이 1–3층을 잇고, 서쪽 계단은 1층 홀에서 2층 발코니로 올라갑니다.'],
   vip:[t('VIP room & player waiting','VIP룸 · 선수 대기존'),t('2F south-west room','2층 남서 전시실 · 약 7.3 × 6.1 m'),
-    t('VIP room and player waiting zone.','2층 남서 전시실을 낮은 칸막이로 나눠, 서쪽은 소파와 낮은 테이블을 둔 VIP룸, 동쪽은 테이블 1개와 의자 8개를 둔 선수 대기존으로 씁니다. 1층 무대와 가깝고 북쪽 계단으로 바로 내려갈 수 있어 선수 호출이 쉽습니다. 소파는 대관처 팔걸이 의자(20개 보유)로 대신할 수 있습니다. 짐 보관과 휴식은 3층 A·B룸을 씁니다.')],
+    t('VIP room and player waiting zone.','2층 남서 전시실을 낮은 칸막이로 나눠, 서쪽은 소파와 낮은 테이블을 둔 VIP룸, 동쪽은 테이블 1개와 의자 8개를 둔 선수 대기존으로 씁니다. 1층 무대와 가깝고 북쪽 계단으로 바로 내려갈 수 있어 선수 호출이 쉽습니다. 소파는 대관처 팔걸이 의자(20개 보유)로 대신할 수 있습니다. 짐 보관과 휴식은 3층 B룸을, 인터뷰는 3층 A룸을 씁니다.')],
   cast:[t('Technical team','테크니컬 팀'),t('2F south walkway','2층 남쪽 통로 · 영상 송출·음향'),
     t('Video output, streaming and sound.','홀과 스크린이 내려다보이는 2층 남쪽 통로에 테크니컬 팀 자리를 둡니다. 스크린 송출, 중계 화면 전환, 음향 믹서를 이곳에서 운영하며 모니터 3대와 3석을 가정합니다. 무대와 스크린이 한눈에 보이고 관객 동선과 겹치지 않습니다. 1층 무대·스크린까지 영상·음향 케이블 경로와 전원은 대관처와 확인합니다.')],
   rail:[t('Balcony & standing rail','발코니·스탠딩 관람'),t('2F · balcony camera','2층 · 발코니 카메라'),
@@ -203,9 +207,10 @@ function mountView(view){
      const active=el.dataset.id===id;el.classList.toggle('sel',active);el.setAttribute('aria-pressed',String(active));
    }
    tipTitle.textContent=name;tipSpec.textContent=specs[id]||'';tipSpec.hidden=!specs[id];
-   const cost=costs[id];tipValue.textContent=cost?cost[0]:'-';
+   const cost=costs[id];tipValue.textContent=cost?cost[0]:'-';tipValue.hidden=!SHOW_ZONE_COSTS;
    const tipButton=actionButton(id,'tabpill');tipAction.replaceChildren(...(tipButton?[tipButton]:[]));tipAction.hidden=!tipButton;
-   const data=element('div','data');data.append(element('b','',info),element('span','',t('Budget','예산')+'  '+(cost?cost[0]+' ('+cost[1]+')':'-')));
+   const data=element('div','data');data.append(element('b','',info));
+   if(SHOW_ZONE_COSTS)data.append(element('span','',t('Budget','예산')+'  '+(cost?cost[0]+' ('+cost[1]+')':'-')));
    if(specs[id])data.prepend(element('b','spec',specs[id]));
    detail.replaceChildren(element('h3','',name),data,element('p','',desc));
    const detailButton=actionButton(id,'tabpill');if(detailButton)detail.append(detailButton);
@@ -217,7 +222,7 @@ function mountView(view){
    const name=zones[id][0],icon=ICONS[id],number=icon?'':String(++count).padStart(2,'0');
    const row=element('button','area'),label=element('span'),num=element('i','num',number);
    if(icon){num.classList.add('icon');num.innerHTML=icon;}
-   label.append(num,document.createTextNode(name));row.append(label,element('small','',costs[id]?costs[id][0]:'-'));
+   label.append(num,document.createTextNode(name));row.append(label);if(SHOW_ZONE_COSTS)row.append(element('small','',costs[id]?costs[id][0]:'-'));
    const pin=element('button','pin',number);pin.title=name;
    if(icon){pin.classList.add('icon');pin.innerHTML=icon;}
    for(const btn of [row,pin]){btn.type='button';btn.dataset.id=id;btn.setAttribute('aria-label',(number?number+' · ':'')+name);btn.onclick=()=>choose(id);}

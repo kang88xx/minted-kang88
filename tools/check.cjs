@@ -32,7 +32,7 @@ const base=process.argv[2];
     // 3F: its own zones, and a zone shared by all floors keeps its selection
     await inside.locator('.floors button[data-floor="3"]').click();
     assert.equal(await pressed(),'3'); assert.equal(await sel(),null);
-    assert.deepEqual(await pins(),['rooms','gallery','facility']);
+    assert.deepEqual(await pins(),['rooms','interview','gallery','facility']);
     // a 1F-only icon pin (the door) is really gone from view on the upper floors
     assert.equal(await inside.locator('.pin[data-id=door]').isVisible(),false);
     await side.locator('.area[data-id=facility]').click(); assert.equal(await pressed(),'3');
@@ -57,10 +57,14 @@ const base=process.argv[2];
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth); assert.ok(overflow<=1,'overflow '+overflow);
     assert.equal(await page.locator('html').getAttribute('lang'),lang);
     assert.deepEqual(errors,[]);
+    // amounts show only in the budget section: none in the zone lists, the bubble or the detail
+    await side.locator('.area[data-id=buffet]').click();
+    assert.ok(!/[0-9]원/.test(await page.locator('#areas, .cost-tip').evaluateAll(n=>n.map(e=>e.innerText).join(' '))),'no amounts in zone lists, bubbles or details');
+    await inside.locator('.floors button[data-floor="1"]').click();
     // schedule layer opens and closes; the hint text is gone; no insurance row; priced rows add up
     await page.locator('.tabs [data-open=schedule]').click();
     assert.equal(await page.locator('#schedule').evaluate(d=>d.open),true);
-    assert.equal(await page.locator('#schedule .timeline tr').count(),29);
+    assert.equal(await page.locator('#schedule .timeline tr').count(),30);
     const fits=await page.locator('#schedule').evaluate(d=>{const r=d.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1});
     assert.ok(fits,'schedule layer fits the viewport');
     await page.locator('#schedule [data-close]').click();

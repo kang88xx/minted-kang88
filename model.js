@@ -682,10 +682,24 @@ function buildInterior(m,floor=1) {
     r.box(.08,y,N1,3.8,cut,N2,'#7d7d7d',steel,'shared');
     r.box(.08,y,N2,2*CW,cut,D-.08,'#7d7d7d',steel,'shared');
     for(let c=N2+.5;c<D;c+=.8)r.line([.08,cut+.005,c],[2*CW,cut+.005,c],'#5f5f5f',.5,'shared');
-    for(const [i,door] of [[2,5.6],[3,8.1]]){
+    for(const [i,door,zone] of [[2,5.6,'rooms'],[3,8.1,'interview']]){
       const x=i*CW;
       wall(x,y,N2,door,cut,N2+.08);wall(door+.9,y,N2,x+CW,cut,N2+.08);
-      wall(x+CW-.08,y,N2+.08,x+CW,cut,D-.08,i===3?glass:shell,'rooms');
+      wall(x+CW-.08,y,N2+.08,x+CW,cut,D-.08,i===3?glass:shell,zone);
+      if(zone==='interview'){
+        // A room (glass on the hall side): interview set at the street end, facing the door end.
+        r.box(x+.25,y,16.2,x+2.15,cut,16.26,dark,steel,zone);                              // backdrop
+        for(const cx of [x+.55,x+1.45])chair(cx,y,15.2,'+s',zone);                         // two interview chairs, backs to the backdrop
+        for(const lx of [x+.4,x+1.95]){                                                    // two light stands
+          r.box(lx-.04,y,13.9-.04,lx+.04,y+1.15,13.9+.04,steel,'none',zone);
+          r.box(lx-.18,y+1.0,13.9-.14,lx+.18,y+1.19,13.9+.14,pale,steel,zone);
+        }
+        tripod(x+1.2,y,12.8,zone);                                                         // camera
+        r.box(x+.2,y,9.2,x+.9,y+.74,11.0,pale,steel,zone);                                 // table for checking footage
+        for(const ms of [9.5,10.3])r.box(x+.3,y+.86,ms,x+.34,y+1.16,ms+.5,dark,steel,zone);
+        for(const cs of [6.0,6.6,7.2])chair(x+.15,y,cs,'-x',zone);                         // waiting chairs by the door
+        continue;
+      }
       for(const s0 of [6.2,10.6]){
         r.box(x+.3,y,s0,x+1.0,y+.42,s0+3.0,sage,steel,'rooms');
         r.box(x+.3,y+.42,s0,x+.5,y+.8,s0+3.0,sage,steel,'rooms');
@@ -720,6 +734,6 @@ function buildInterior(m,floor=1) {
     wall(XM,y,SS,12.6,cut,SS+.08);wall(13.6,y,SS,XE0,cut,SS+.08);wall(XE1,y,SS,W-.08,cut,SS+.08);
     wall(XE0,y,SS,XE1,cut,D,dark);
     stairDown('x',15.5,16.5,19.0,23.0,y+.012);
-    return {rooms:r.at(3*CW,cut,9.6),gallery:r.at(22.6,y+.9,7.4),facility:r.at(1.9,cut,N1),shared:r.at(15.55,cut,15.85)};
+    return {rooms:r.at(2*CW+1.2,cut,9.6),interview:r.at(3*CW+1.2,cut,13.6),gallery:r.at(22.6,y+.9,7.4),facility:r.at(1.9,cut,N1),shared:r.at(15.55,cut,15.85)};
   }
 }
